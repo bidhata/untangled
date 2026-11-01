@@ -1,0 +1,160 @@
+name: Release packages
+
+# Build the UnTangled OpenWRT packages and publish them to a GitHub Release.
+#
+# Trigger: push a version tag, e.g.
+#     git tag v0.2.0 && git push origin v0.2.0
+# The workflow builds both package formats and attaches them to the release:
+#   * .ipk  (opkg)  — OpenWRT 23.05 and earlier,  built with the 23.05.5 SDK
+#   * .apk  (apk)   — OpenWRT 24.10 and later,     built with the 24.10.8 SDK
+# Each format yields two packages: `untangled` (core) and `untangled-full` (meta).
+#
+# You can also run it by hand from the Actions tab (workflow_dispatch) to get
+# the artifacts without cutting a release.
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write        # needed to create the GitHub Release
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build ${{ matrix.fmt }} (OpenWRT ${{ matrix.release }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - release: '23.05.5'
+            arch: 'x86_64-23.05.5'   # -> .ipk (opkg), OpenWRT <= 23.05
+            fmt: ipk
+          - release: '24.10.8'
+            arch: 'x86_64-24.10.8'   # -> .apk, OpenWRT >= 24.10
+            fmt: apk
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build the SPA
+        run: npm run build
+
+      - name: Determine package version
+        id: ver
+        run: |
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            # strip a leading "v" from the tag: v0.2.0 -> 0.2.0
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            # manual run: reuse the version already in the Makefile
+            VERSION="$(sed -n 's/^PKG_VERSION:=//p' openwrt/Makefile)"
+          fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Building UnTangled ${VERSION} (${{ matrix.fmt }})"
+
+      - name: Assemble the SDK feed
+        run: |
+          set -eux
+          # The gh-action-sdk mounts FEED_DIR as an OpenWRT package feed and
+          # looks for a package directory named after the package. Build a
+          # clean feed containing just our package: Makefile + files + the
+          # freshly built SPA under files/www/untangled/.
+          rm -rf feed
+          mkdir -p feed/untangled
+          cp openwrt/Makefile feed/untangled/Makefile
+          cp -r openwrt/files feed/untangled/files
+          cp -r openwrt/files-mesh feed/untangled/files-mesh   # untangled-mesh package payload
+          mkdir -p feed/untangled/files/www/untangled
+          cp -r dist/. feed/untangled/files/www/untangled/
+          # Stamp the version derived above into the package Makefile.
+          sed -i "s/^PKG_VERSION:=.*/PKG_VERSION:=${{ steps.ver.outputs.version }}/" feed/untangled/Makefile
+          grep '^PKG_VERSION' feed/untangled/Makefile
+
+      - name: Build packages (OpenWRT SDK)
+        uses: openwrt/gh-action-sdk@main
+        env:
+          ARCH: ${{ matrix.arch }}
+          FEED_DIR: ${{ github.workspace }}/feed
+          FEEDNAME: untangled
+          PACKAGES: untangled untangled-full untangled-mesh
+          V: s
+
+      - name: Collect built packages
+        run: |
+          set -eux
+          mkdir -p out
+          # PKGARCH:=all, so these are architecture-independent packages.
+          find bin -type f \( -name 'untangled*.ipk' -o -name 'untangled*.apk' \) \
+            -exec cp -v {} out/ \;
+          echo "--- collected ---"
+          ls -l out
+          # Fail loudly if the SDK produced nothing (e.g. feed not picked up).
+          if [ -z "$(ls -A out)" ]; then
+            echo "::error::No packages were produced; check the SDK build log above."
+            exit 1
+          fi
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: untangled-${{ matrix.fmt }}
+          path: out/*
+          if-no-files-found: error
+
+  release:
+    name: Publish GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref_type == 'tag'
+    steps:
+      - name: Download all built packages
+        uses: actions/download-artifact@v4
+        with:
+          path: dist-packages
+          merge-multiple: true
+
+      - name: List release assets
+        run: ls -lR dist-packages
+
+      - name: Create / update the release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist-packages/*
+          fail_on_unmatched_files: true
+          generate_release_notes: true
+          body: |
+            ## UnTangled ${{ github.ref_name }}
+
+            A modern web interface for OpenWRT (an alternative to LuCI).
+
+            **Install:**
+
+            ```sh
+            # OpenWRT 24.10+ (apk):
+            apk add ./untangled-*.apk            # core, HTTP only
+            apk add ./untangled-full-*.apk       # + HTTPS, Wi-Fi scan, firmware/backup
+
+            # OpenWRT 23.05 and earlier (opkg):
+            opkg install ./untangled_*.ipk       # core, HTTP only
+            opkg install ./untangled-full_*.ipk  # full feature set
+            ```
+
+            Packages are architecture-independent (`all`). See the repository
+            README for post-install ACL setup.

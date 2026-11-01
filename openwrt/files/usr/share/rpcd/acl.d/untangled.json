@@ -1,0 +1,55 @@
+{
+  "untangled": {
+    "description": "UnTangled web interface — full administrative access",
+    "read": {
+      "ubus": {
+        "session": ["access", "list"],
+        "uci": ["get", "state", "changes"],
+        "network.device": ["status"],
+        "network.interface": ["dump"],
+        "network.interface.*": ["status"],
+        "network.wireless": ["status"],
+        "iwinfo": ["devices", "info", "scan", "assoclist"],
+        "system": ["board", "info"],
+        "luci-rpc": ["getNetworkDevices", "getHostHints", "getDHCPLeases", "getWirelessDevices"],
+        "log": ["read"],
+        "untangled.sw": ["list"],
+        "untangled.mesh": ["info", "status", "nodes"]
+      },
+      "uci": ["*"]
+    },
+    "write": {
+      "ubus": {
+        "uci": ["add", "set", "delete", "order", "commit", "apply", "confirm", "rollback"],
+        "network": ["reload", "restart"],
+        "network.interface.*": ["up", "down"],
+        "network.wireless": ["up", "down"],
+        "rpc-sys": ["*"],
+        "file": ["exec", "write", "read"],
+        "luci": ["setPassword"],
+        "session": ["destroy"],
+        "untangled.sw": ["update", "install", "remove", "upgrade"],
+        "untangled.mesh": ["set_roaming", "set_role", "join", "leave", "apply"]
+      },
+      "uci": ["*"]
+    }
+  },
+  "untangled-readonly": {
+    "description": "UnTangled — read-only (dashboards, status, logs)",
+    "read": {
+      "ubus": {
+        "session": ["access", "list"],
+        "uci": ["get", "state"],
+        "network.device": ["status"],
+        "network.interface": ["dump"],
+        "network.interface.*": ["status"],
+        "iwinfo": ["devices", "info", "assoclist"],
+        "system": ["board", "info"],
+        "luci-rpc": ["getNetworkDevices", "getHostHints", "getDHCPLeases", "getWirelessDevices"],
+        "log": ["read"]
+      },
+      "uci": ["*"]
+    },
+    "write": {}
+  }
+}
