@@ -5,7 +5,7 @@ durable "what/where/why" map; the running narrative lives in `HANDOFF.md`, and
 the open task of the moment is always at the **top of `HANDOFF.md`**.
 
 Keep this file current when structure, conventions, or key decisions change.
-Last updated: 2026-11-03 (v0.1.9 released; signing done; field-report fixes + review hardening + upstream draft).
+Last updated: 2026-11-03 (v0.1.9 released; signing done; field-report fixes + review hardening + upstream draft + layman install/package docs).
 
 ---
 
@@ -234,7 +234,20 @@ key". Verified in real OpenWRT containers at **v0.1.8 and v0.1.9**:
 feed + **signed release-page assets** + Pages). A **`workflow_dispatch`**
 redeploys only the feed/site at the latest tag's version and **skips** the
 Release job (so tagged assets are untouched). To ship new code as a release,
-push a tag. The workflow emits `::warning::` on an unsigned feed.
+push a tag; to push only `site/`/feed changes live (no new release), dispatch.
+The workflow emits `::warning::` on an unsigned feed.
+
+**Packaging naming — DO NOT "fix":** `untangled-full` is a **meta-package that
+ships no files** (`install: true`); its `.apk`/`.ipk` is ~1 KB while the core
+`untangled` is ~90 KB (it carries the SPA). Full is smaller *by design* — it
+just DEPENDS on core + extras. `untangled-mesh` (~3.75 KB) is bigger than full
+because it ships a real helper script. Release asset names
+(`untangled_<ver>_all.ipk`, `untangled-<ver>.apk`) are the exact forms
+opkg/apk require — **renaming them breaks the feed/install.** This confuses
+users; it's explained (not renamed) in README, `site/index.html`, both Makefile
+descriptions, and the auto-generated release-notes body in `release.yml`.
+Install docs are **step-by-step** (check OpenWRT version → run on router →
+open `http://<router-ip>/untangled/`).
 
 **KNOWN GAP — snapshot apk feed layout:** current snapshot `apk` expects
 `snapshot/x86_64/APKINDEX.tar.gz`; our feed publishes `snapshot/packages.adb`
