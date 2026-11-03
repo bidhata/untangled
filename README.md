@@ -1,6 +1,6 @@
 <div align="center">
 
-<a href="https://bidhata.github.io/untangled/"><img src="site/logo.svg" alt="UnTangled" width="420"></a>
+<a href="https://bidhata.github.io/untangled/"><picture><source media="(prefers-color-scheme: dark)" srcset="site/logo-dark.svg"><img src="site/logo.svg" alt="UnTangled" width="420"></picture></a>
 
 ### Your router, untangled.
 
