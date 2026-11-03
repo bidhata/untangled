@@ -84,6 +84,9 @@ endef
 define Package/untangled/install
 	$(INSTALL_DIR) $(1)/www/untangled
 	$(CP) ./files/www/untangled/. $(1)/www/untangled/
+	# Opt-in "default page": Administration can put this first in uhttpd's
+	# index_page list so http://router/ opens UnTangled (LuCI untouched).
+	$(INSTALL_DATA) ./files/www/untangled-home.html $(1)/www/untangled-home.html
 	$(INSTALL_DIR) $(1)/usr/share/rpcd/acl.d
 	$(INSTALL_DATA) ./files/usr/share/rpcd/acl.d/untangled.json $(1)/usr/share/rpcd/acl.d/untangled.json
 	$(INSTALL_DIR) $(1)/etc/uci-defaults
