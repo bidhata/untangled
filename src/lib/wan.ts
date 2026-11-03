@@ -1,4 +1,4 @@
-import { call, uciSet, uciApplyRollback } from './ubus';
+import { call, uciSet, uciDelete, uciApplyRollback } from './ubus';
 
 export interface WanCfg {
   proto: string; username: string; password: string;
@@ -25,7 +25,11 @@ export async function saveWan(c: WanCfg): Promise<void> {
   const values: Record<string, unknown> = { proto: c.proto, peerdns: c.peerdns ? '1' : '0' };
   if (c.proto === 'pppoe') { values.username = c.username; values.password = c.password; }
   if (c.proto === 'static') { values.ipaddr = c.ipaddr; values.netmask = c.netmask; values.gateway = c.gateway; }
-  values.dns = c.peerdns ? '' : (c.dns ? c.dns.trim().split(/\s+/) : '');
+  // Custom DNS only applies when peerdns is off; set it as a uci list, else
+  // remove the option entirely (writing '' leaves a bogus empty list element).
+  const customDns = !c.peerdns && c.dns.trim() ? c.dns.trim().split(/\s+/) : null;
+  if (customDns) values.dns = customDns;
   await uciSet('network', 'wan', values);
+  if (!customDns) await uciDelete('network', 'wan', 'dns').catch(() => {});
   await uciApplyRollback();
 }

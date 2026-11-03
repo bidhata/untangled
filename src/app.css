@@ -173,9 +173,11 @@ input:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 
 .bandchip{font-size:10.5px;padding:3px 9px;border-radius:999px;font-weight:700;letter-spacing:.2px}
 .b5{background:rgba(15,181,196,.14);color:var(--accent-deep)}
 .b24{background:rgba(247,144,9,.16);color:#b45309}
+.b6{background:rgba(122,90,248,.15);color:#5b35d6}
 .bwired{background:rgba(23,178,106,.15);color:#0f7a4a}
 .bunk{background:var(--panel-2);color:var(--muted)}
 :root[data-theme="dark"] .b24{color:#ffb02e}
+:root[data-theme="dark"] .b6{color:#b7a3ff}
 :root[data-theme="dark"] .bwired{color:#36d67a}
 
 .clients{width:100%;border-collapse:collapse;font-size:13px}

@@ -156,3 +156,6 @@ Next up: hardware validation reports · VPN policy routing (per-device VPN, à l
 
 Developed by **Krish Paul** · <me@krishnendu.com> · Licensed **GPL-2.0-or-later**<br>
 Website: <https://bidhata.github.io/untangled/> · Source: <https://github.com/bidhata/untangled>
+
+Thanks to **[@spdixit](https://github.com/spdixit)** for field testing and bug reports
+(device band/connection detection, applied-item ordering, and installed-app visibility).

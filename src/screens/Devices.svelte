@@ -21,7 +21,7 @@
   }
   onMount(load);
 
-  const IP_RE = /^(\d{1,3})(\.\d{1,3}){3}$/;
+  const IP_RE = /^((25[0-5]|2[0-4]\d|1?\d?\d)\.){3}(25[0-5]|2[0-4]\d|1?\d?\d)$/;
 
   async function doReserve(r: DeviceRow) {
     const ip = (r.reservedIp ? r.draftIp : r.ip).trim();

@@ -1,6 +1,6 @@
 // Extend Wi-Fi: scan for upstream networks and join one as a client.
 // (Sharing that connection with the LAN uses relayd — see the screen's note.)
-import { call, uciAdd, uciApply } from './ubus';
+import { call, uciGet, uciSet, uciAdd, uciApply } from './ubus';
 import { loadWireless } from './wireless';
 
 export interface ScanResult { ssid: string; signal: number; locked: boolean; bssid: string; }
@@ -34,14 +34,26 @@ export async function scan(): Promise<ScanResult[]> {
 
 export async function joinNetwork(ssid: string, key: string): Promise<void> {
   const radios = await loadWireless();
+  const device = radios[0]?.id ?? 'radio0';
   await uciAdd('network', 'interface', 'wwan', { proto: 'dhcp' }).catch(() => {});
-  await uciAdd('wireless', 'wifi-iface', undefined, {
-    device: radios[0]?.id ?? 'radio0',
+
+  // Reuse an existing STA iface on this radio instead of stacking a new one
+  // each time join is called (which would leave duplicate client interfaces).
+  const wl = await uciGet('wireless').catch(() => ({} as any));
+  const wv = (wl as any)?.values ?? wl ?? {};
+  let staId: string | null = null;
+  for (const [id, s] of Object.entries<any>(wv)) {
+    if (s?.['.type'] === 'wifi-iface' && s.mode === 'sta') { staId = id; break; }
+  }
+  const cfg = {
+    device,
     mode: 'sta',
     network: 'wwan',
     ssid,
     encryption: key ? 'psk2' : 'none',
     key
-  });
+  };
+  if (staId) await uciSet('wireless', staId, cfg);
+  else await uciAdd('wireless', 'wifi-iface', undefined, cfg);
   await uciApply();
 }

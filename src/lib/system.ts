@@ -63,7 +63,13 @@ export async function saveRebootSchedule(s: RebootSchedule): Promise<void> {
     .split('\n')
     .filter((l) => l.trim() && !l.includes(CRON_MARK));
   if (s.enabled) {
-    kept.push(`${s.minute} ${s.hour} * * ${s.day} /sbin/reboot ${CRON_MARK}`);
+    // Clamp every field before it reaches the crontab file: these are the only
+    // values interpolated into a line written as root, so a bad value must not
+    // be able to inject extra cron fields or a command.
+    const min = Math.min(59, Math.max(0, Math.trunc(Number(s.minute) || 0)));
+    const hr = Math.min(23, Math.max(0, Math.trunc(Number(s.hour) || 0)));
+    const dow = /^[0-6]$/.test(String(s.day)) ? String(s.day) : '*';
+    kept.push(`${min} ${hr} * * ${dow} /sbin/reboot ${CRON_MARK}`);
   }
   await call('file', 'write', { path: CRON_PATH, data: kept.join('\n') + '\n', mode: 600 });
   // Make sure crond is enabled and picks up the change.

@@ -110,8 +110,10 @@ export function uciApply() {
   return call('uci', 'apply', { rollback: false });
 }
 /** Apply with a rollback timer: if uciConfirm isn't called within `timeout`
- *  seconds, the router restores the previous config. Prevents lockouts. */
-export function uciApplyRollback(timeout = 90) {
+ *  seconds, the router restores the previous config. Prevents lockouts.
+ *  Keep this LONGER than the UI confirm countdown (confirm.ts, 90s) so a
+ *  last-second "Keep" reaches the router before it auto-reverts. */
+export function uciApplyRollback(timeout = 120) {
   return call('uci', 'apply', { rollback: true, timeout });
 }
 /** Keep changes applied with uciApplyRollback (cancels the revert timer). */

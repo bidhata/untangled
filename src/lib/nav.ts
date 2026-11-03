@@ -34,6 +34,7 @@ export const nav: NavGroup[] = [
       { id: 'upnp', label: 'UPnP', icon: 'i-port' },
       { id: 'portfwd', label: 'Port Forwarding', icon: 'i-port' },
       { id: 'vpn', label: 'VPN', icon: 'i-vpn' },
+      { id: 'tailscale', label: 'Tailscale', icon: 'i-vpn' },
       { id: 'lan', label: 'LAN', icon: 'i-lan' },
       { id: 'ipv6', label: 'IPv6', icon: 'i-ipv6' },
       { id: 'firewall', label: 'Firewall', icon: 'i-fire' },
