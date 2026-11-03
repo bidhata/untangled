@@ -5,7 +5,7 @@ durable "what/where/why" map; the running narrative lives in `HANDOFF.md`, and
 the open task of the moment is always at the **top of `HANDOFF.md`**.
 
 Keep this file current when structure, conventions, or key decisions change.
-Last updated: 2026-11-03.
+Last updated: 2026-11-03 (v0.1.9 released; signing done; field-report fixes + review hardening + upstream draft).
 
 ---
 
@@ -37,7 +37,7 @@ groups `untangled`/`untangled-readonly`, rpcd helper `untangled.sw` /
 - **Backend (on router):** no app server — the SPA talks to OpenWRT's existing
   `ubus` JSON-RPC over `/ubus` (via uhttpd + uhttpd-mod-ubus), plus `rpcd`
   helpers and `cgi-io` for uploads. Config is read/written via **UCI**.
-- **Bundle size:** ~75 KB gz JS + ~5 KB gz CSS (the whole selling point vs LuCI's 2–4 MB).
+- **Bundle size:** ~80 KB gz JS + ~6 KB gz CSS (the whole selling point vs LuCI's 2–4 MB).
 
 Commands (from repo root):
 - `npm install`
@@ -66,6 +66,7 @@ Commands (from repo root):
 │   └── screens/              # one Svelte component per nav screen
 ├── public/plugins/           # runtime plugins shipped in core (ping, mesh) + index.json
 ├── openwrt/                  # OpenWRT packaging (Makefile, rpcd ACL, uci-defaults, mesh files)
+│   └── upstream/             # DRAFT Makefile+README for a future openwrt/packages PR (not shipped)
 ├── feed/untangled/           # assembled package feed source (built UI + mesh files)
 ├── keys/                     # package-signing PUBLIC keys (private halves gitignored)
 ├── site/                     # landing site (index.html, logos, og.png)
@@ -98,17 +99,19 @@ Per-feature data libs (each paired with a screen; most degrade to an
 `firewall.ts` (zones + DMZ + port forwarding), `parental.ts`, `wan.ts`,
 `lan.ts`, `ipv6.ts`, `system.ts` (hostname/tz/password/reboot/scheduled reboot),
 `protection.ts` (adblock/banIP), `vpn.ts` (WireGuard + OpenVPN), `repeater.ts`
-(iwinfo scan + join as sta), `software.ts` (apk via `untangled.sw`), `ddns.ts`,
+(iwinfo scan + join as sta), `tailscale.ts` (status/up/down via `tailscale` CLI
+over file.exec), `software.ts` (lists installed pkgs via apk/opkg over file.exec;
+install/remove path needs the unshipped `untangled.sw` helper), `ddns.ts`,
 `qos.ts` (sqm), `upnp.ts` (miniupnpd-nftables), `firmware.ts` (sysupgrade via
 cgi-io), `dualwan.ts` (mwan3 generator), `usb.ts` (mounts + ksmbd + minidlna),
 `history.ts` (vnstat + nlbwmon usage history).
 
 ### Screens (`src/screens/`)
 One component per nav id. All nav items are real screens; `Placeholder.svelte`
-is only a fallback. Current set: NetworkMap, Devices, GuestNetwork,
+is only a fallback. Current set (26): NetworkMap, Devices, GuestNetwork,
 TrafficMonitor, UsageHistory, ParentalControls, ExtendWifi, NetworkProtection,
-Wireless, Wan, Ddns, Qos, DualWan, Upnp, PortForwarding, Vpn, Lan, Ipv6,
-Firewall, Dmz, Administration, SystemLog, UsbApps, Firmware, Software.
+Wireless, Wan, Ddns, Qos, DualWan, Upnp, PortForwarding, Vpn, Tailscale, Lan,
+Ipv6, Firewall, Dmz, Administration, SystemLog, UsbApps, Firmware, Software.
 
 Nav grouping (see `nav.ts`): **General**, **Advanced Settings**, **System**.
 
@@ -182,9 +185,13 @@ device-side orchestration), not pure core.
 ## 8. Safety model
 
 - **Rollback-confirm** for connectivity-risky saves (Wireless, WAN, LAN, Firewall zones, DMZ): apply with a rollback timer (`uciApplyRollback`) → "Keep changes? reverting in Ns" dialog (`ConfirmApply.svelte`). Keep → `uciConfirm`; Revert/timeout → `uciRollback` + reload.
-- Safe screens (Guest, PortForwarding, Parental, Protection, VPN peers) use plain `uciApply`.
+- **Timer invariant:** `uciApplyRollback` default is **120s** (router), `startRollbackConfirm` default is **90s** (UI) — the UI countdown must stay strictly inside the router window so a last-second "Keep" lands before auto-revert.
+- **confirm.ts is single-flight:** a new `startRollbackConfirm` finalizes any in-flight one first; keep/revert callbacks are captured synchronously before the `await`.
+- Safe screens (Guest, PortForwarding, Parental, Protection, VPN peers, device block/reserve, ipv6, dualwan, repeater) use plain `uciApply` — these can't cut the admin's own management session, so a rollback timer (which would auto-revert a successful change) would be wrong.
 - Known caveat: an intentional LAN-IP change can't be confirmed from the old IP (router auto-reverts) — same as LuCI.
 - Deliberate no-op stubs where half-built state could break a live router (mesh `set_role`/`join`/`leave`/`apply` were stubs before phase 2; `apply` still is).
+- **Band detection** (`net.ts`): a client is "Wired" only when the wireless subsystem actually answered and the MAC wasn't in any `iwinfo assoclist`; if wireless is unreadable it shows **Unknown**, never a false "Wired". Supports 2.4/5/6 GHz.
+- **Trust-boundary validation:** cron reboot fields are clamped/validated before writing the crontab; Devices IP reservation rejects octets > 255; file.exec uses argv arrays (not shell strings), so no shell injection.
 
 ---
 
@@ -198,48 +205,66 @@ The user ships a beta to non-technical users and cares about not generating
 - The user delegates scope ("you choose", "go"), replies tersely, and when asked for options prefers a short **ponytail-style** critique (lazy-senior-dev, smallest complete change) with one recommendation, not a menu.
 
 **Not yet validated on physical routers.** Everything shipped so far was
-verified in OpenWRT docker rootfs. Hardware-dependent bits to re-check on real
-gear: createGuest provisioning, apk helper (`untangled.sw`), VPN key-gen/QR
-(deferred — paste pubkey for now), Extend Wi-Fi relayd bridge (deferred — joins
-as client only), reboot via file.exec, password via rpcd-mod-luci, mesh
-multi-node.
+verified in OpenWRT docker rootfs (install + uhttpd serving) and by
+build/type-check/unit-asserts. **Live-ubus logic is NOT container-testable** (a
+bare rootfs has no ubus session/radios/clients) — the real test is
+`ROUTER=<ip> npm run dev`. Hardware-dependent / half-done bits to re-check:
+createGuest provisioning (flagship, highest risk), Extend Wi-Fi (joins as client
+only — does NOT share to LAN; UI now says so), VPN create (manage-only, no
+keygen/PKI create path; UI now says so), `untangled.sw` apk install/remove
+(helper not shipped — Software is view-only), Tailscale `--timeout` + field
+names, reboot via file.exec, password via rpcd-mod-luci, mesh multi-node.
 
 ---
 
-## 10. Release status & open task
+## 10. Release status
 
-- Releases v0.1.0–v0.1.7 exist (v0.1.0/v0.1.1 failed builds, v0.1.2 ipk-only). **v0.1.7 is current.**
-- Feed + landing site + live demo live at https://bidhata.github.io/untangled/ .
+- Releases v0.1.0–v0.1.9 exist. **v0.1.9 is current and Latest.** (v0.1.0/v0.1.1 failed builds; v0.1.2 ipk-only; v0.1.7 shipped UNSIGNED.)
+- Feed + landing site + live demo at https://bidhata.github.io/untangled/ .
+- `main` HEAD is ahead of releases only when there are newer commits; docs-only/UI-copy changes don't need a new tag.
 
-**SIGNING: DONE & VERIFIED (2026-11-03).** The feed is now signed. History:
-`USIGN_KEY`/`APK_KEY` repository secrets were added; first `workflow_dispatch`
-still failed because `USIGN_KEY` was malformed on paste ("Failed to decode
-secret key" — usign needs the exact 2-line key file, comment line included);
-re-pasted it; second dispatch (run `41657906833`) went green and published a
-signed feed. Verified in real OpenWRT containers:
-- `/keys/*.pub|pem`, `stable/Packages.sig`, `snapshot/packages.adb` → all HTTP 200 (were 404).
-- **opkg (23.05):** `usign -V` on `Packages.sig` OK; `opkg update` → "Signature check passed"; `opkg install untangled` OK with `check_signature` on and **no `--allow-untrusted`**. usign key fp `ebd6eddd72aa9d25`.
-- **apk (snapshot):** `apk verify untangled-full-0.1.7-r1.apk` = **OK with our `untangled.pem`, UNTRUSTED without it** → genuinely signed by our EC key (not a throwaway).
+**SIGNING: DONE & VERIFIED (feed + release assets).** `USIGN_KEY`/`APK_KEY`
+repo secrets are set. Gotcha learned: `USIGN_KEY` must be the **exact 2-line
+usign key file** (comment line included) or usign fails "Failed to decode secret
+key". Verified in real OpenWRT containers at **v0.1.8 and v0.1.9**:
+- opkg (23.05): `usign -V` on `Packages.sig` OK; `opkg install untangled` with `check_signature` on, no `--allow-untrusted`. usign fp `ebd6eddd72aa9d25`.
+- apk (snapshot): `apk verify untangled-full-<ver>.apk` = OK with `keys/untangled.pem`, UNTRUSTED without it (release-page assets, not just the feed).
 
-**KNOWN GAP — snapshot apk feed layout:** the current snapshot `apk` client
-expects `snapshot/x86_64/APKINDEX.tar.gz`, but our feed publishes
-`snapshot/packages.adb` (older layout), so `apk update` can't resolve our repo
-as a live source (signing is fine; this is a layout mismatch). Stable/opkg —
-what nearly all 23.05/24.10 users use — installs end-to-end. Track separately if
-snapshot users should `apk add` directly from the feed.
+**Release mechanics:** a **tag push (`v*`)** cuts a full release (builds + signed
+feed + **signed release-page assets** + Pages). A **`workflow_dispatch`**
+redeploys only the feed/site at the latest tag's version and **skips** the
+Release job (so tagged assets are untouched). To ship new code as a release,
+push a tag. The workflow emits `::warning::` on an unsigned feed.
 
-**Release-asset note:** a `workflow_dispatch` redeploys the *feed* but skips the
-Release job, so the `.apk/.ipk` **attached to the v0.1.7 tag are still the old
-unsigned builds**. The live feed is signed (installs are fine); to sign the
-Release-page assets too, cut a new tag.
+**KNOWN GAP — snapshot apk feed layout:** current snapshot `apk` expects
+`snapshot/x86_64/APKINDEX.tar.gz`; our feed publishes `snapshot/packages.adb`
+(older layout), so `apk update` can't add our repo as a live source (signing is
+fine — layout mismatch only). Stable/opkg (nearly all users) works end-to-end.
 
-The workflow emits `::warning::` on an unsigned feed. Owner set repo secrets per
-`keys/README.md`.
+**Field-report fixes (from @spdixit, shipped v0.1.9):** robust Wi-Fi band
+detection; blocked/applied items sorted to top of Devices + Parental lists;
+Software lists real installed packages (apk/opkg) + links notable apps to their
+screens; new Tailscale screen. Plus review-hardening (rollback timer race,
+cron-day validation, IP octet validation, WAN dns-clear, repeater STA dedupe,
+dualwan clean rewrite, confirm single-flight) and honesty-copy for Extend
+Wi-Fi + VPN empty/success states.
 
-**Deferred backlog:** VPN policy routing (last remaining gap); mesh phase 3;
-README/demo parity for the default-page panel; reconcile Administration
-divergence (prototype has backup-restore/config-profiles/undo; real app has
-name/tz/password/scheduled-reboot/reboot but not those three).
+**Deferred backlog:** VPN *create* flow (keygen/PKI); mesh phase 3 (multi-node
+discovery, 802.11s backhaul, dumb-AP bridging); Extend Wi-Fi LAN sharing
+(relayd); Software `untangled.sw` helper (or remove the dead write path/ACL
+grants); reconcile Administration divergence (prototype has backup-restore/
+config-profiles/undo; real app doesn't).
+
+**Audience decision (locked):** **non-tech-first**. Hard-defer power-user
+foot-guns: VLAN/switch (DSA port) editing, raw firewall traffic rules/custom
+nftables, startup/init + raw cron editors, full LuCI parity. Lean into the
+differentiators (Network Map, task flows, per-field help, rollback safety).
+
+**Upstream (openwrt/packages):** a DRAFT Makefile+README live in
+`openwrt/upstream/` — fetches a pinned release *product* tarball (prebuilt
+`dist/`) because buildbots have no network. **Not submitted**; gated on hardware
+validation. To use it: attach a `untangled-<ver>.tar.gz` (top-level `dist/
+files/ files-mesh/ LICENSE`) to the release and fill `PKG_HASH`.
 
 **Can't match (proprietary):** AiProtection/HomeShield IPS, AiMesh/OneMesh,
 port triggering (not native to OpenWRT, no fw4/nftables drop-in — replaced by
@@ -254,6 +279,7 @@ UPnP/NAT-PMP + static port forwarding).
 - `docs/PLUGINS.md` — plugin authoring.
 - `keys/README.md` — signing key generation + repo-secret + Pages setup.
 - `openwrt/README.md`, `feed/untangled/Makefile` — packaging.
+- `openwrt/upstream/Makefile` + `README.md` — draft for a future openwrt/packages PR.
 
 ---
 
@@ -267,5 +293,10 @@ cd /root/bhuci && . ./.gh_token      # exports GH_TOKEN; gh + git then work
 ```
 `gh` CLI is installed (v2.46). With the token sourced:
 - push: `git push origin main`
+- cut a release: `git tag vX.Y.Z <commit> && git push origin vX.Y.Z`
 - redeploy feed/site without a release: `gh workflow run "Release packages" --ref main`
-- watch: `gh run watch <id> --exit-status`
+- watch: `gh run watch <id> --exit-status` (snapshot leg is slow, ~10 min)
+
+**Security note:** the current token was pasted into a chat transcript, so it is
+considered exposed — the owner should revoke it (GitHub → Settings → Developer
+settings → Fine-grained tokens) when done and drop a fresh one into `.gh_token`.
