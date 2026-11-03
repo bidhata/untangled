@@ -57,6 +57,17 @@ Pages site but is not allowed to **create** one, so enable it once by hand:
 
 Until this is done the `Publish package feed` job fails with
 `Create Pages site failed ... Resource not accessible by integration`.
-After enabling, open the failed run in the Actions tab and choose
+
+**Then allow release tags to deploy.** Enabling Pages auto-creates a
+`github-pages` environment whose default policy only lets the `main` branch
+deploy, so the tag-triggered release job is rejected with
+`Tag "vX.Y.Z" is not allowed to deploy to github-pages due to environment
+protection rules`. Fix once:
+
+**Settings → Environments → github-pages → Deployment branches and tags →
+"Selected branches and tags" → Add deployment branch or tag rule → Ref type:
+Tag → pattern `v*`**
+
+After both settings, open the failed run in the Actions tab and choose
 **Re-run failed jobs** (the build artifacts are still attached, so no new
 release is needed), or simply push the next tag.

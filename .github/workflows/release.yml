@@ -252,8 +252,13 @@ jobs:
       # with Source = "GitHub Actions" (Settings -> Pages -> Build and
       # deployment). The workflow token can deploy to an existing Pages site
       # but is NOT allowed to create one (configure-pages' `enablement: true`
-      # fails with "Resource not accessible by integration"). After enabling
-      # Pages once, re-run this job (or push the next tag) and it deploys.
+      # fails with "Resource not accessible by integration").
+      # ALSO ONE-TIME: enabling Pages auto-creates the `github-pages`
+      # environment with a policy that only lets `main` deploy, so this
+      # tag-triggered job is rejected ("Tag v* is not allowed to deploy to
+      # github-pages due to environment protection rules"). Add a deployment
+      # rule for tags matching `v*` under Settings -> Environments ->
+      # github-pages. Then re-run this job (or push the next tag).
       - name: Configure Pages
         uses: actions/configure-pages@v5
 
