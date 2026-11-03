@@ -114,18 +114,37 @@ jobs:
           # no *.init scripts, so the check is moot; disable it explicitly.
           NO_SHFMT_CHECK: 1
           V: s
+          # Signing + feed index. The action writes KEY_BUILD -> key-build (usign,
+          # signs the opkg `Packages` index) and PRIVATE_KEY -> private-key.pem
+          # (EC prime256v1; the snapshot build derives public-key.pem from it
+          # and signs the apk packages + packages.adb). INDEX=1 runs
+          # `make package/index` so the feed is installable. Both secrets are
+          # optional: when unset the action simply builds unsigned.
+          INDEX: 1
+          KEY_BUILD: ${{ secrets.USIGN_KEY }}
+          PRIVATE_KEY: ${{ secrets.APK_KEY }}
 
-      - name: Collect built packages
+      - name: Collect built packages and feed
         run: |
           set -eux
-          mkdir -p out
-          # PKGARCH:=all, so these are architecture-independent packages.
-          find bin -type f \( -name 'untangled*.ipk' -o -name 'untangled*.apk' \) \
-            -exec cp -v {} out/ \;
-          echo "--- collected ---"
-          ls -l out
+          FMT='${{ matrix.fmt }}'
+          # Namespace by format so the two artifacts merge without colliding.
+          mkdir -p "out/$FMT/pkgs" "out/$FMT/feed"
+          # The SDK writes our feed to bin/packages/<arch>/untangled/. With
+          # INDEX=1 that directory is a complete, installable package feed:
+          #   ipk: Packages, Packages.gz, Packages.sig (usign), *.ipk
+          #   apk: packages.adb (signed), *.apk (each individually signed)
+          # Copy the whole directory for the feed, and the bare packages for
+          # the GitHub Release assets. PKGARCH:=all -> architecture-independent.
+          FEED_DIR="$(find bin/packages -type d -name untangled | head -n1)"
+          [ -n "$FEED_DIR" ] || { echo "::error::feed dir not found under bin/packages"; exit 1; }
+          cp -r "$FEED_DIR"/. "out/$FMT/feed/"
+          find "$FEED_DIR" -type f \( -name 'untangled*.ipk' -o -name 'untangled*.apk' \) \
+            -exec cp -v {} "out/$FMT/pkgs/" \;
+          echo "--- feed ---";  ls -l "out/$FMT/feed"
+          echo "--- pkgs ---";  ls -l "out/$FMT/pkgs"
           # Fail loudly if the SDK produced nothing (e.g. feed not picked up).
-          if [ -z "$(ls -A out)" ]; then
+          if [ -z "$(ls -A "out/$FMT/pkgs")" ]; then
             echo "::error::No packages were produced; check the SDK build log above."
             exit 1
           fi
@@ -134,7 +153,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: untangled-${{ matrix.fmt }}
-          path: out/*
+          path: out
           if-no-files-found: error
 
   release:
@@ -155,7 +174,7 @@ jobs:
       - name: Create / update the release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist-packages/*
+          files: dist-packages/*/pkgs/*
           fail_on_unmatched_files: true
           generate_release_notes: true
           body: |
@@ -175,8 +194,72 @@ jobs:
             apk add ./untangled-full-*.apk       # full feature set
             ```
 
+            **Prefer the signed package feed** (one-time setup, then normal
+            `opkg`/`apk` installs and upgrades, no manual downloads):
+            https://bidhata.github.io/untangled/ — instructions and public
+            keys are on that page.
+
             The single `.ipk` set works on every current stable release
             (`PKGARCH:=all`). The `.apk` set is only for OpenWRT **snapshot**,
             which is the only line that uses apk; it is built best-effort and
             may be absent if a snapshot build broke. See the repository README
             for post-install ACL setup.
+
+  pages:
+    name: Publish package feed (GitHub Pages)
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref_type == 'tag'
+    # Job-level permissions replace the workflow's. Pages deploys via OIDC.
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: Checkout (for public keys + site page)
+        uses: actions/checkout@v4
+
+      - name: Download built feeds
+        uses: actions/download-artifact@v4
+        with:
+          path: dist-packages
+          merge-multiple: true
+
+      - name: Assemble the feed site
+        run: |
+          set -eux
+          mkdir -p _site
+          # Each feed dir is a complete signed repository as emitted by the SDK
+          # (INDEX=1): stable = ipk (Packages + Packages.sig), snapshot = apk
+          # (signed packages.adb + individually signed .apk).
+          [ -d dist-packages/ipk/feed ] && cp -r dist-packages/ipk/feed _site/stable
+          [ -d dist-packages/apk/feed ] && cp -r dist-packages/apk/feed _site/snapshot
+          # Public signing keys are committed under keys/ (private halves live
+          # only in repository Secrets). Skip gracefully if not yet added.
+          if [ -d keys ]; then
+            mkdir -p _site/keys
+            cp keys/*.pub keys/*.pem _site/keys/ 2>/dev/null || true
+          fi
+          [ -f site/index.html ] && cp site/index.html _site/index.html
+          # Serve files verbatim (no Jekyll processing of Packages.gz etc.).
+          touch _site/.nojekyll
+          ls -lR _site
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+        with:
+          # Creates the Pages site on first run so no manual repo setting is
+          # needed (source becomes "GitHub Actions").
+          enablement: true
+
+      - name: Upload site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Deploy
+        id: deploy
+        uses: actions/deploy-pages@v4
