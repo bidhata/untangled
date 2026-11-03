@@ -4,6 +4,8 @@ node_modules/
 # Build output
 dist/
 *.tsbuildinfo
+# Local copy of the SDK feed the release workflow assembles (CI recreates it)
+feed/
 
 # Caches
 .vite/
@@ -14,6 +16,15 @@ coverage/
 .env
 .env.*
 *.local
+
+# Package-signing PRIVATE keys — never commit. Only the public halves
+# (keys/*.pub, keys/*.pem) belong in the repo; private keys live in
+# GitHub Actions Secrets (USIGN_KEY, APK_KEY).
+keys/*.key
+keys/*.key.pem
+key-build
+key-build.pub.tmp
+private-key.pem
 
 # Logs
 *.log

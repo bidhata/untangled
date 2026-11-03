@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UnTangled — package feed for OpenWRT</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; max-width: 760px; margin: 2.5rem auto; padding: 0 1.25rem; color: #1f2937; background: #fff; }
+  @media (prefers-color-scheme: dark) { body { color: #e5e7eb; background: #0f172a; } pre, code { background: #1e293b !important; } .note { background: #1e293b; border-color: #334155; } }
+  h1 { font-size: 1.9rem; margin-bottom: .25rem; }
+  h2 { margin-top: 2.25rem; padding-top: .5rem; border-top: 1px solid #d1d5db55; }
+  .sub { color: #6b7280; margin-top: 0; }
+  pre { background: #f3f4f6; padding: .9rem 1rem; border-radius: 8px; overflow-x: auto; font-size: .92rem; }
+  code { background: #f3f4f6; padding: .1rem .35rem; border-radius: 4px; font-size: .92em; }
+  pre code { padding: 0; background: none; }
+  .note { background: #f9fafb; border: 1px solid #e5e7eb; border-left: 4px solid #0ea5e9; padding: .75rem 1rem; border-radius: 6px; margin: 1.25rem 0; }
+  table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+  td, th { text-align: left; padding: .45rem .6rem; border-bottom: 1px solid #e5e7eb55; vertical-align: top; }
+  a { color: #0284c7; }
+  footer { margin-top: 3rem; color: #6b7280; font-size: .9rem; }
+</style>
+</head>
+<body>
+
+<h1>UnTangled package feed</h1>
+<p class="sub">A modern web interface for OpenWRT — installable with your router's own package manager.</p>
+
+<p>Add this feed <strong>once</strong>, then UnTangled installs and upgrades like any other OpenWRT package.
+All packages and the feed index are <strong>cryptographically signed</strong>; your router verifies them automatically.</p>
+
+<table>
+  <tr><th>Your OpenWRT</th><th>Package manager</th><th>Feed</th></tr>
+  <tr><td><strong>Stable</strong> — 23.05, 24.10</td><td><code>opkg</code> (.ipk)</td><td><code>/stable/</code></td></tr>
+  <tr><td><strong>Snapshot</strong> — development builds</td><td><code>apk</code> (.apk)</td><td><code>/snapshot/</code></td></tr>
+</table>
+
+<div class="note">Not sure which you have? Run <code>cat /etc/openwrt_release</code> on the router. A <code>DISTRIB_RELEASE</code> like <code>24.10.x</code> is stable; <code>SNAPSHOT</code> is snapshot.</div>
+
+<h2>Stable OpenWRT (23.05 / 24.10) — opkg</h2>
+<p>Run these on the router (SSH, or LuCI → System → Custom Commands):</p>
+<pre><code># 1. Trust the UnTangled signing key (one time)
+wget -O /tmp/untangled.pub https://bidhata.github.io/untangled/keys/untangled.pub
+opkg-key add /tmp/untangled.pub
+
+# 2. Add the feed (one time)
+echo 'src/gz untangled https://bidhata.github.io/untangled/stable' >> /etc/opkg/customfeeds.conf
+
+# 3. Install
+opkg update
+opkg install untangled-full      # or: untangled (minimal)  /  untangled-mesh (Mesh Wi-Fi)</code></pre>
+<p>Later upgrades: <code>opkg update &amp;&amp; opkg upgrade untangled untangled-full untangled-mesh</code>.</p>
+
+<h2>OpenWRT snapshot — apk</h2>
+<pre><code># 1. Trust the UnTangled signing key (one time)
+wget -O /etc/apk/keys/untangled.pem https://bidhata.github.io/untangled/keys/untangled.pem
+
+# 2. Add the feed (one time)
+echo 'https://bidhata.github.io/untangled/snapshot/packages.adb' > /etc/apk/repositories.d/untangled.list
+
+# 3. Install
+apk update
+apk add untangled-full           # or: untangled  /  untangled-mesh</code></pre>
+<p>Later upgrades: <code>apk update &amp;&amp; apk upgrade</code>. Because the key is trusted, no <code>--allow-untrusted</code> is ever needed.</p>
+
+<div class="note">The feed is served over HTTPS. OpenWRT needs TLS support for that — present on practically every modern image (<code>libustream-mbedtls</code> or <code>-wolfssl</code> plus <code>ca-bundle</code>). If <code>wget</code>/<code>opkg update</code> complain about SSL, install <code>ca-bundle</code> first from the official feed.</div>
+
+<h2>After installing</h2>
+<p>Open <code>http://&lt;router-ip&gt;/untangled/</code> and log in with your router's admin account. UnTangled runs <strong>alongside LuCI</strong> — it never replaces or alters it.
+Full setup notes: <a href="https://github.com/bidhata/untangled/blob/main/openwrt/README.md">openwrt/README.md</a>.</p>
+
+<h2>Public keys</h2>
+<table>
+  <tr><td><a href="keys/untangled.pub">keys/untangled.pub</a></td><td>usign (ed25519) — verifies the <code>opkg</code> feed index</td></tr>
+  <tr><td><a href="keys/untangled.pem">keys/untangled.pem</a></td><td>EC P-256 — verifies <code>apk</code> packages and index</td></tr>
+</table>
+<p>Prefer manual downloads? Every release also attaches the raw <code>.ipk</code>/<code>.apk</code> files on
+<a href="https://github.com/bidhata/untangled/releases">GitHub Releases</a>.</p>
+
+<footer>UnTangled · GPL-2.0-or-later · <a href="https://github.com/bidhata/untangled">github.com/bidhata/untangled</a> · Developed by Krish Paul</footer>
+</body>
+</html>

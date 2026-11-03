@@ -90,19 +90,25 @@ Three packages are built from one source — install the tier you want:
 | `untangled-full` | Core **+** HTTPS, Wi-Fi scan, firmware upgrade, Wake-on-LAN. |
 | `untangled-mesh` | Mesh Wi-Fi backend (dawn roaming + discovery). |
 
-```sh
-# Stable OpenWRT (23.05 & 24.10) — opkg / .ipk
-opkg install ./untangled-full_*.ipk
+**Recommended — the signed package feed.** Add it once; then UnTangled installs and upgrades like any other OpenWRT package. Packages and the index are signed and verified by your router automatically.
 
-# OpenWRT snapshot (main) — apk / .apk
-apk add ./untangled-full-*.apk
+```sh
+# Stable OpenWRT (23.05 & 24.10) — opkg
+wget -O /tmp/untangled.pub https://bidhata.github.io/untangled/keys/untangled.pub && opkg-key add /tmp/untangled.pub
+echo 'src/gz untangled https://bidhata.github.io/untangled/stable' >> /etc/opkg/customfeeds.conf
+opkg update && opkg install untangled-full
+
+# OpenWRT snapshot — apk
+wget -O /etc/apk/keys/untangled.pem https://bidhata.github.io/untangled/keys/untangled.pem
+echo 'https://bidhata.github.io/untangled/snapshot/packages.adb' > /etc/apk/repositories.d/untangled.list
+apk update && apk add untangled-full
 ```
 
-The package is architecture-independent (`PKGARCH:=all`), so the single `.ipk` set installs on every current stable release. apk is not used by any released OpenWRT yet — the `.apk` set targets **snapshot** only.
+Full feed instructions and the public keys live at **<https://bidhata.github.io/untangled/>**.
 
-Then grant your admin login the `untangled` ACL group and browse to the router. Full steps, size table and HTTPS setup are in **[`openwrt/README.md`](openwrt/README.md)**.
+**Manual alternative:** every release also attaches raw `.ipk` (stable) and `.apk` (snapshot) files on the [GitHub Releases](https://github.com/bidhata/untangled/releases) page (`opkg install ./untangled-full_*.ipk`; for apk, trust the key first or pass `--allow-untrusted`). The package is architecture-independent (`PKGARCH:=all`), so one `.ipk` set covers every current stable release; apk is used only by OpenWRT **snapshot**.
 
-Prebuilt `.ipk` (stable) and `.apk` (snapshot) are attached to the [GitHub Releases](https://github.com/bidhata/untangled/releases) page — built automatically by CI on every version tag.
+Then grant your admin login the `untangled` ACL group and browse to `http://<router>/untangled/`. UnTangled runs alongside LuCI without touching it. Full steps, size table and HTTPS setup are in **[`openwrt/README.md`](openwrt/README.md)**.
 
 ---
 
