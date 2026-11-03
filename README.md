@@ -23,25 +23,50 @@ Built for the whole household, with every advanced knob still one click away.
 
 OpenWRT is the best router firmware there is. Its stock interface was built for engineers. **UnTangled keeps all the power and makes it feel like a product** — a visual Network Map, plain-language controls and a `?` beside every setting for the family; a ⌘K command palette and "Advanced details" for you. It runs **alongside LuCI**, never replacing it.
 
-## Install in 60 seconds
+## Install — step by step
 
-Add the signed UnTangled feed once, then install and upgrade with the router's own package manager. Run on the router (SSH, or LuCI → System → Custom Commands):
+You'll run a few commands **on the router** — either over SSH, or in **LuCI → System → Custom Commands** (no SSH needed). It takes about a minute, and LuCI keeps working untouched the whole time.
+
+**Step 1 — Which OpenWRT do you have?** In LuCI it's on the **Status → Overview** page (or run `cat /etc/openwrt_release`). If it says **23.05** or **24.10**, you're on *stable* → use the **opkg** commands. If it says *SNAPSHOT*, use the **apk** commands. (When in doubt, you're almost certainly on stable.)
+
+**Step 2 — Add the UnTangled feed and install.** Copy–paste the matching block:
+
+<details open>
+<summary><b>Stable OpenWRT (23.05 / 24.10) — opkg</b></summary>
 
 ```sh
-# Stable OpenWRT (23.05 / 24.10) — opkg
-wget -O /tmp/untangled.pub https://bidhata.github.io/untangled/keys/untangled.pub && opkg-key add /tmp/untangled.pub
+# 1. Trust UnTangled's signing key (so the router knows the packages are genuine)
+wget -O /tmp/untangled.pub https://bidhata.github.io/untangled/keys/untangled.pub
+opkg-key add /tmp/untangled.pub
+
+# 2. Add the feed
 echo 'src/gz untangled https://bidhata.github.io/untangled/stable' >> /etc/opkg/customfeeds.conf
-opkg update && opkg install untangled-full
+
+# 3. Refresh the package list and install (untangled-full = everything)
+opkg update
+opkg install untangled-full
 ```
+</details>
+
+<details>
+<summary><b>OpenWRT snapshot — apk</b></summary>
 
 ```sh
-# OpenWRT snapshot — apk
+# 1. Trust UnTangled's signing key
 wget -O /etc/apk/keys/untangled.pem https://bidhata.github.io/untangled/keys/untangled.pem
-echo 'https://bidhata.github.io/untangled/snapshot/packages.adb' > /etc/apk/repositories.d/untangled.list
-apk update && apk add untangled-full
-```
 
-Then open **`http://<router-ip>/untangled/`** and sign in with your router's admin account. LuCI keeps working untouched at `/`.
+# 2. Add the feed
+echo 'https://bidhata.github.io/untangled/snapshot/packages.adb' > /etc/apk/repositories.d/untangled.list
+
+# 3. Refresh and install (untangled-full = everything)
+apk update
+apk add untangled-full
+```
+</details>
+
+**Step 3 — Open it.** Go to **`http://<router-ip>/untangled/`** in your browser (e.g. `http://192.168.1.1/untangled/`) and sign in with your **router's admin account** — the same username/password you use for LuCI. That's it. LuCI still works untouched at `/`.
+
+> **No router yet?** [Click through the live demo](https://bidhata.github.io/untangled/demo/) first — the full UI with sample data, right in your browser.
 
 | Package | What you get |
 |---|---|
@@ -49,7 +74,27 @@ Then open **`http://<router-ip>/untangled/`** and sign in with your router's adm
 | `untangled-full` | Core **+** HTTPS, Wi-Fi scan, firmware upgrade, Wake-on-LAN. |
 | `untangled-mesh` | Mesh Wi-Fi backend (dawn roaming + umdns discovery). |
 
+> **Which one? Just install `untangled-full`** — it gives you everything.
+>
+> 💡 **Why is the `untangled-full` download tiny (~1 KB) and `untangled` ~90 KB?**
+> That's expected. `untangled` (core) holds the actual interface, so it's the
+> big one. `untangled-full` is just a short "shopping list" that tells the router
+> to install the core **plus** the extras (HTTPS, Wi-Fi scan, firmware, WoL) — so
+> its own file is tiny, but installing it pulls in everything. Think of it like
+> a "meal deal" ticket: small ticket, full meal.
+
 Prefer a file? Every release attaches raw `.ipk` (stable) and `.apk` (snapshot) on [Releases](https://github.com/bidhata/untangled/releases). The package is architecture-independent (`PKGARCH:=all`), so one `.ipk` covers every current stable release; apk is used only by OpenWRT snapshot. Post-install ACL notes, size table and HTTPS setup: [`openwrt/README.md`](openwrt/README.md).
+
+**Reading the file names on the Releases page:**
+
+| File | Format | For | Which |
+|---|---|---|---|
+| `untangled_<ver>_all.ipk` | opkg | **OpenWRT 23.05 / 24.10** (stable) | core |
+| `untangled-full_<ver>_all.ipk` | opkg | stable | full (recommended) |
+| `untangled-<ver>.apk` | apk | **OpenWRT snapshot** only | core |
+| `untangled-full-<ver>.apk` | apk | snapshot only | full |
+
+> On stable OpenWRT use the **`.ipk`** files. The **`.apk`** files are only for the experimental *snapshot* builds. The long names (version + `all` for "any router model") are required by the router's package manager — don't rename them.
 
 > 🖱️ **No router handy?** [Click through the live demo](https://bidhata.github.io/untangled/demo/) — the full UI with sample data, in your browser.
 

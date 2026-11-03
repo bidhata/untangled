@@ -215,6 +215,19 @@ jobs:
             apk add ./untangled-full-*.apk       # full feature set
             ```
 
+            **Which file do I download?** On **stable** OpenWRT (23.05 / 24.10)
+            use the **`.ipk`** files; the **`.apk`** files are only for OpenWRT
+            **snapshot**. In both cases, **`-full` is the one to install** — it
+            pulls in the core UI plus HTTPS, Wi-Fi scan, firmware upgrade and
+            Wake-on-LAN.
+
+            > Heads-up: the `untangled-full` file is tiny (~1 KB) while
+            > `untangled` (core) is ~90 KB. That's expected — the core holds the
+            > actual interface; `-full` is just a short list that tells the
+            > router to install the core **plus** the extras. Small file, full
+            > install. (The long `_all` in the names means "works on any router
+            > model"; don't rename the files — the package manager needs them.)
+
             **Prefer the signed package feed** (one-time setup, then normal
             `opkg`/`apk` installs and upgrades, no manual downloads):
             https://bidhata.github.io/untangled/ — instructions and public
