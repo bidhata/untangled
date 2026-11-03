@@ -91,16 +91,18 @@ Three packages are built from one source — install the tier you want:
 | `untangled-mesh` | Mesh Wi-Fi backend (dawn roaming + discovery). |
 
 ```sh
-# OpenWRT 24.10+ (apk)
-apk add ./untangled-full-*.apk
-
-# OpenWRT 23.05 and earlier (opkg)
+# Stable OpenWRT (23.05 & 24.10) — opkg / .ipk
 opkg install ./untangled-full_*.ipk
+
+# OpenWRT snapshot (main) — apk / .apk
+apk add ./untangled-full-*.apk
 ```
+
+The package is architecture-independent (`PKGARCH:=all`), so the single `.ipk` set installs on every current stable release. apk is not used by any released OpenWRT yet — the `.apk` set targets **snapshot** only.
 
 Then grant your admin login the `untangled` ACL group and browse to the router. Full steps, size table and HTTPS setup are in **[`openwrt/README.md`](openwrt/README.md)**.
 
-Prebuilt `.ipk` and `.apk` for each release are attached to the [GitHub Releases](https://github.com/bidhata/untangled/releases) page — built automatically by CI on every version tag.
+Prebuilt `.ipk` (stable) and `.apk` (snapshot) are attached to the [GitHub Releases](https://github.com/bidhata/untangled/releases) page — built automatically by CI on every version tag.
 
 ---
 

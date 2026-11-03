@@ -29,16 +29,26 @@ jobs:
   build:
     name: Build ${{ matrix.fmt }} (OpenWRT ${{ matrix.release }})
     runs-on: ubuntu-latest
+    # Experimental legs (snapshot) may fail as upstream main moves; don't let
+    # that fail the job or block the stable release.
+    continue-on-error: ${{ matrix.experimental || false }}
     strategy:
       fail-fast: false
       matrix:
         include:
+          # Stable: opkg/.ipk. apk does not exist in any released OpenWRT yet
+          # (23.05 and 24.10 are both ipk-only). PKGARCH:=all, so a single .ipk
+          # built on the oldest supported release installs on all stable
+          # OpenWRT (23.05 through 24.10).
           - release: '23.05.5'
-            arch: 'x86_64-23.05.5'   # -> .ipk (opkg), OpenWRT <= 23.05
+            arch: 'x86_64-23.05.5'
             fmt: ipk
-          - release: '24.10.8'
-            arch: 'x86_64-24.10.8'   # -> .apk, OpenWRT >= 24.10
+          # Snapshot (unreleased main): the only line that uses apk. Best-effort
+          # so a snapshot-side breakage never blocks the stable .ipk release.
+          - release: 'snapshot'
+            arch: 'x86_64-snapshot'
             fmt: apk
+            experimental: true
 
     steps:
       - name: Checkout
@@ -156,14 +166,17 @@ jobs:
             **Install:**
 
             ```sh
-            # OpenWRT 24.10+ (apk):
-            apk add ./untangled-*.apk            # core, HTTP only
-            apk add ./untangled-full-*.apk       # + HTTPS, Wi-Fi scan, firmware/backup
-
-            # OpenWRT 23.05 and earlier (opkg):
+            # Stable OpenWRT (23.05 and 24.10) — opkg / .ipk:
             opkg install ./untangled_*.ipk       # core, HTTP only
-            opkg install ./untangled-full_*.ipk  # full feature set
+            opkg install ./untangled-full_*.ipk  # + HTTPS, Wi-Fi scan, firmware/backup
+
+            # OpenWRT snapshot (main) — apk / .apk:
+            apk add ./untangled-*.apk            # core, HTTP only
+            apk add ./untangled-full-*.apk       # full feature set
             ```
 
-            Packages are architecture-independent (`all`). See the repository
-            README for post-install ACL setup.
+            The single `.ipk` set works on every current stable release
+            (`PKGARCH:=all`). The `.apk` set is only for OpenWRT **snapshot**,
+            which is the only line that uses apk; it is built best-effort and
+            may be absent if a snapshot build broke. See the repository README
+            for post-install ACL setup.
