@@ -61,6 +61,7 @@
       <div class="big-ic" style="margin:0 auto 12px"><Icon name="i-check" size={30} /></div>
       <h3 style="margin:0 0 4px;font-size:18px">Connecting to {chosen?.ssid}</h3>
       <p class="hint">The router is joining the network as a client.</p>
+      <p class="hint" style="max-width:420px;margin:8px auto 0">This extends Wi-Fi for devices connected to <b>this</b> router. Sharing the connection with your wired/LAN devices needs an extra relay step (coming soon).</p>
       <div style="margin-top:16px"><button class="btn" on:click={() => { step = 'scan'; }}>Extend another network</button></div>
     </div>
   {/if}

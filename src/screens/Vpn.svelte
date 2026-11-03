@@ -89,7 +89,7 @@
 
     {#if serverProto === 'wireguard'}
       {#if !serverWg.length}
-        <div class="panel"><div class="panel-b"><p class="hint" style="margin:0">No WireGuard server interface found. Add a <span class="mono">proto 'wireguard'</span> interface (needs <span class="mono">wireguard-tools</span>), then manage its devices here.</p></div></div>
+        <div class="panel"><div class="panel-b"><p class="hint" style="margin:0">No WireGuard server yet. To set one up: on the router create an interface with <span class="mono">proto 'wireguard'</span> and a listen port (needs <span class="mono">wireguard-tools</span>) — then your devices appear here to add by public key. A guided "create server" step is coming soon.</p></div></div>
       {/if}
       {#each serverWg as w}
         <div class="panel" style="max-width:780px;margin-bottom:16px">
