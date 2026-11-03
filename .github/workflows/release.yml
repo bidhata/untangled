@@ -93,7 +93,11 @@ jobs:
           ARCH: ${{ matrix.arch }}
           FEED_DIR: ${{ github.workspace }}/feed
           FEEDNAME: untangled
-          PACKAGES: untangled untangled-full untangled-mesh
+          # One source package `untangled`; its compile emits all three .ipk/.apk
+          # (untangled, untangled-full, untangled-mesh). Listing the sub-package
+          # names here fails: the SDK runs `make package/<name>/compile` per name
+          # and only the source dir `untangled` is a valid target.
+          PACKAGES: untangled
           V: s
 
       - name: Collect built packages
