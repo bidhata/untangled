@@ -3,7 +3,8 @@
   import Help from '../components/Help.svelte';
   import {
     loadSystem, saveSystem, setPassword, reboot, TIMEZONES, type SysCfg,
-    loadRebootSchedule, saveRebootSchedule, type RebootSchedule
+    loadRebootSchedule, saveRebootSchedule, type RebootSchedule,
+    loadDefaultPage, setDefaultPage
   } from '../lib/system';
   import { toast } from '../lib/toast';
 
@@ -40,12 +41,26 @@
       cfg = await loadSystem();
       orig = JSON.stringify(cfg);
       sched = await loadRebootSchedule().catch(() => sched);
+      home = await loadDefaultPage().catch(() => false);
       error = '';
     }
     catch { error = 'Could not read the system configuration.'; }
     finally { loading = false; }
   }
   onMount(load);
+
+  // Default page: is "/" UnTangled? Also show an escape hatch to LuCI when it exists.
+  let home = false;
+  let homeBusy = false;
+  let hasLuci = false;
+  fetch('/cgi-bin/luci', { method: 'HEAD' }).then((r) => (hasLuci = r.ok)).catch(() => {});
+  async function toggleHome(e: Event) {
+    const el = e.target as HTMLInputElement;
+    homeBusy = true;
+    try { await setDefaultPage(el.checked); home = el.checked; toast(home ? 'UnTangled is now the default page' : 'Default page restored'); }
+    catch { el.checked = home; toast('Could not change the default page'); }
+    finally { homeBusy = false; }
+  }
 
   async function applySchedule() {
     schedBusy = true;
@@ -98,6 +113,15 @@
       <div class="form-row"><div class="lbl">Time zone<Help text="Sets the clock used for logs and schedules (like parental controls)." /></div>
         <div class="ctl"><select value={cfg.zonename} on:change={onZone}>{#each TIMEZONES as t}<option value={t.zonename}>{t.zonename}</option>{/each}</select></div></div>
       <div class="form-actions"><button class="btn primary" on:click={applySystem} disabled={!dirty || busy}>Apply</button></div>
+    </div>
+  </div>
+
+  <div class="panel" style="max-width:720px;margin-bottom:18px">
+    <div class="panel-h"><h2>Default page</h2></div>
+    <div class="panel-b">
+      <div class="form-row"><div class="lbl">Open UnTangled at http://router/<Help text="Makes UnTangled the page you land on when you type the router's address. LuCI, if installed, keeps working at /cgi-bin/luci — nothing is removed, and you can switch back any time." /></div>
+        <div class="ctl"><label class="toggle"><input type="checkbox" checked={home} disabled={homeBusy} on:change={toggleHome} /><span class="track"></span><span class="knob"></span></label>
+          {#if hasLuci}<a class="hint" href="/cgi-bin/luci" target="_blank" rel="noopener">Open LuCI</a>{/if}</div></div>
     </div>
   </div>
 

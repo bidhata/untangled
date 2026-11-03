@@ -71,6 +71,34 @@ export async function saveRebootSchedule(s: RebootSchedule): Promise<void> {
   await call('file', 'exec', { command: '/etc/init.d/cron', params: ['restart'] }).catch(() => {});
 }
 
+// ---- Default page: make http://router/ open UnTangled ----------------------
+// uhttpd's index_page is an ordered list; our package ships /www/untangled-home.html
+// (a redirect to /untangled/). Putting it first makes "/" land on UnTangled while
+// /untangled/ still serves its own index.html. LuCI's files are never touched.
+const HOME = 'untangled-home.html';
+
+async function indexPages(): Promise<string[]> {
+  const r = await call<any>('uci', 'get', { config: 'uhttpd', section: 'main', option: 'index_page' }).catch(() => null);
+  return ([] as string[]).concat(r?.value ?? []);
+}
+
+export async function loadDefaultPage(): Promise<boolean> {
+  return (await indexPages()).includes(HOME);
+}
+
+export async function setDefaultPage(on: boolean): Promise<void> {
+  const rest = (await indexPages()).filter((v) => v !== HOME);
+  // Only our entry moves; a user's own index list is preserved.
+  const list = on ? [HOME, ...(rest.length ? rest : ['index.html'])] : rest;
+  if (list.length && !(list.length === 1 && list[0] === 'index.html')) {
+    await uciSet('uhttpd', 'main', { index_page: list });
+  } else {
+    await call('uci', 'delete', { config: 'uhttpd', section: 'main', option: 'index_page' }).catch(() => {});
+  }
+  await uciApply();
+  await call('file', 'exec', { command: '/etc/init.d/uhttpd', params: ['reload'] }).catch(() => {});
+}
+
 // A short, friendly timezone list (POSIX TZ strings). Extend as needed.
 export const TIMEZONES: { zonename: string; timezone: string }[] = [
   { zonename: 'UTC', timezone: 'UTC' },
