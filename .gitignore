@@ -17,6 +17,11 @@ coverage/
 .env.*
 *.local
 
+# Local GitHub token for release automation (never commit — pushing it to a
+# public repo triggers GitHub secret-scanning auto-revocation). Source it with
+# `. .gh_token` to get GH_TOKEN into the shell.
+.gh_token
+
 # Package-signing PRIVATE keys — never commit. Only the public halves
 # (keys/*.pub, keys/*.pem) belong in the repo; private keys live in
 # GitHub Actions Secrets (USIGN_KEY, APK_KEY).

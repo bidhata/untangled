@@ -6,22 +6,30 @@ Last updated: 2026-11-03.
 
 ## OPEN TASK (start here)
 
-**The package feed is unsigned.** v0.1.7 is the current release
-(https://github.com/bidhata/untangled/releases, feed at
-https://bidhata.github.io/untangled/). The signing keys exist locally in
-`keys/` (private halves gitignored) and the public halves are committed, but
-the `USIGN_KEY` / `APK_KEY` secrets did not reach the build jobs:
-`stable/Packages.sig` is 404 and `snapshot/packages.adb` + the `.apk` verify
-as UNTRUSTED against `keys/untangled.pem`. `/keys/` on the site is 404
-because the v0.1.7 tag predates the keys commit.
+**Signing is DONE as of 2026-11-03 — the feed is signed and verified.** The
+two repository secrets (`USIGN_KEY`, `APK_KEY`) were added; the first
+`workflow_dispatch` failed because `USIGN_KEY` was malformed on paste (usign:
+"Failed to decode secret key" — it needs the exact 2-line key file, comment
+line included), re-pasting fixed it, and run `41657906833` published a signed
+feed. Verified in real OpenWRT containers: `usign -V` on
+`stable/Packages.sig` = OK; `opkg update`/`opkg install untangled` in a 23.05
+rootfs with `check_signature` on and **no `--allow-untrusted`**; `apk verify`
+on the snapshot `.apk` = OK with `keys/untangled.pem`, UNTRUSTED without it.
+`/keys/`, `stable/Packages.sig`, `snapshot/packages.adb` all HTTP 200.
 
-Fix: owner sets the two **repository** secrets (see `keys/README.md`), pushes
-main, then runs the "Release packages" workflow by hand on main
-(workflow_dispatch rebuilds at the latest tag's version and redeploys feed +
-keys, no new tag). Then verify: `usign -V` on the index, `opkg update` in a
-23.05 rootfs with check_signature on, `apk add untangled-full` in a snapshot
-rootfs without `--allow-untrusted`. Local commit `5722233` adds workflow
-warnings for unsigned feeds (push pending).
+**Remaining follow-ups (not blocking):**
+1. **Release-page assets still unsigned.** A `workflow_dispatch` redeploys the
+   *feed* but skips the Release job, so the `.apk/.ipk` attached to the v0.1.7
+   tag are the old unsigned builds. The live feed is signed (installs are
+   fine). To sign the Release assets too, **cut a new tag** (e.g. v0.1.8).
+2. **Snapshot apk feed layout mismatch.** Current snapshot `apk` expects
+   `snapshot/x86_64/APKINDEX.tar.gz`; our feed publishes `snapshot/packages.adb`
+   (older layout), so `apk update` can't add our repo as a live source. Signing
+   is fine; this is a layout gap. Stable/opkg (nearly all users) works
+   end-to-end. Fix only if snapshot users must `apk add` from the feed.
+
+Release automation: token at `/root/bhuci/.gh_token` (gitignored); `. ./.gh_token`
+then `git push` / `gh workflow run "Release packages" --ref main`.
 
 
 ---

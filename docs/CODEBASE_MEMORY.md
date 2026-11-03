@@ -211,15 +211,30 @@ multi-node.
 - Releases v0.1.0–v0.1.7 exist (v0.1.0/v0.1.1 failed builds, v0.1.2 ipk-only). **v0.1.7 is current.**
 - Feed + landing site + live demo live at https://bidhata.github.io/untangled/ .
 
-**OPEN TASK (see top of `HANDOFF.md` for the authoritative version):** the
-package feed is **unsigned**. Keys exist locally and public halves are
-committed, but `USIGN_KEY`/`APK_KEY` secrets didn't reach the build jobs:
-`stable/Packages.sig` is 404; `snapshot/packages.adb` + `.apk` verify as
-UNTRUSTED; `/keys/` on the site is 404 (v0.1.7 tag predates the keys commit).
-**Fix (owner action):** set the two **repository** secrets per `keys/README.md`,
-push main, run "Release packages" by hand on main (workflow_dispatch), then
-verify (`usign -V`; `opkg update` with check_signature; `apk add` without
-`--allow-untrusted`). The workflow now emits `::warning::` on an unsigned feed.
+**SIGNING: DONE & VERIFIED (2026-11-03).** The feed is now signed. History:
+`USIGN_KEY`/`APK_KEY` repository secrets were added; first `workflow_dispatch`
+still failed because `USIGN_KEY` was malformed on paste ("Failed to decode
+secret key" — usign needs the exact 2-line key file, comment line included);
+re-pasted it; second dispatch (run `41657906833`) went green and published a
+signed feed. Verified in real OpenWRT containers:
+- `/keys/*.pub|pem`, `stable/Packages.sig`, `snapshot/packages.adb` → all HTTP 200 (were 404).
+- **opkg (23.05):** `usign -V` on `Packages.sig` OK; `opkg update` → "Signature check passed"; `opkg install untangled` OK with `check_signature` on and **no `--allow-untrusted`**. usign key fp `ebd6eddd72aa9d25`.
+- **apk (snapshot):** `apk verify untangled-full-0.1.7-r1.apk` = **OK with our `untangled.pem`, UNTRUSTED without it** → genuinely signed by our EC key (not a throwaway).
+
+**KNOWN GAP — snapshot apk feed layout:** the current snapshot `apk` client
+expects `snapshot/x86_64/APKINDEX.tar.gz`, but our feed publishes
+`snapshot/packages.adb` (older layout), so `apk update` can't resolve our repo
+as a live source (signing is fine; this is a layout mismatch). Stable/opkg —
+what nearly all 23.05/24.10 users use — installs end-to-end. Track separately if
+snapshot users should `apk add` directly from the feed.
+
+**Release-asset note:** a `workflow_dispatch` redeploys the *feed* but skips the
+Release job, so the `.apk/.ipk` **attached to the v0.1.7 tag are still the old
+unsigned builds**. The live feed is signed (installs are fine); to sign the
+Release-page assets too, cut a new tag.
+
+The workflow emits `::warning::` on an unsigned feed. Owner set repo secrets per
+`keys/README.md`.
 
 **Deferred backlog:** VPN policy routing (last remaining gap); mesh phase 3;
 README/demo parity for the default-page panel; reconcile Administration
@@ -239,3 +254,18 @@ UPnP/NAT-PMP + static port forwarding).
 - `docs/PLUGINS.md` — plugin authoring.
 - `keys/README.md` — signing key generation + repo-secret + Pages setup.
 - `openwrt/README.md`, `feed/untangled/Makefile` — packaging.
+
+---
+
+## 12. Release automation credentials
+
+A GitHub token for push + `workflow_dispatch` is stored at `/root/bhuci/.gh_token`
+(gitignored — **never commit it**; a public-repo push would trigger GitHub
+secret-scanning auto-revocation). To authenticate in a shell:
+```sh
+cd /root/bhuci && . ./.gh_token      # exports GH_TOKEN; gh + git then work
+```
+`gh` CLI is installed (v2.46). With the token sourced:
+- push: `git push origin main`
+- redeploy feed/site without a release: `gh workflow run "Release packages" --ref main`
+- watch: `gh run watch <id> --exit-status`
