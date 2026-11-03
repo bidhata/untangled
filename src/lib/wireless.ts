@@ -89,7 +89,9 @@ export async function saveWireless(r: WifiRadio): Promise<void> {
       ieee80211r: r.roaming ? '1' : '0'
     });
     if (r.roaming) {
-      // 802.11r needs a mobility domain shared across APs; set a stable default.
+      // 802.11r needs a mobility domain shared across APs; '4f57' must match the
+      // value the mesh helper writes (openwrt/files-mesh/.../untangled.mesh) so
+      // roaming works between core-configured and mesh-configured APs.
       await uciSet('wireless', r.ifaceId, { mobility_domain: '4f57', ft_over_ds: '0', ft_psk_generate_local: '1' });
     }
   }

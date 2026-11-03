@@ -16,6 +16,11 @@ export function startRollbackConfirm(
   label: string,
   opts: { timeout?: number; onKeep?: () => void; onRevert?: () => void } = {}
 ) {
+  // Single-flight: if a confirm is already pending, finalize it before starting
+  // a new one. The user is still connected (they just triggered another change),
+  // so the earlier change is safe to keep — otherwise its callbacks would be
+  // clobbered and its router-side rollback timer would silently revert it.
+  if (onKeepCb || onRevertCb) void keepChanges();
   const timeout = opts.timeout ?? 90;
   onKeepCb = opts.onKeep ?? null;
   onRevertCb = opts.onRevert ?? null;
@@ -38,14 +43,16 @@ function stop() {
 
 export async function keepChanges() {
   stop();
+  const cb = onKeepCb; onKeepCb = onRevertCb = null;  // capture before await
   try { await uciConfirm(); } catch { /* ignore */ }
-  const cb = onKeepCb; onKeepCb = onRevertCb = null; cb?.();
+  cb?.();
 }
 
 export async function revertChanges() { await doRevert(); }
 
 async function doRevert() {
   stop();
+  const cb = onRevertCb; onKeepCb = onRevertCb = null;  // capture before await
   try { await uciRollback(); } catch { /* ignore — router auto-reverts on its own timer */ }
-  const cb = onRevertCb; onKeepCb = onRevertCb = null; cb?.();
+  cb?.();
 }

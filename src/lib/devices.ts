@@ -94,8 +94,15 @@ export async function loadDevices(): Promise<DeviceRow[]> {
     row.blocked = b.enabled; row.blockId = b.id;
   }
 
+  // Surface devices you've acted on: blocked first, then those with a fixed IP,
+  // then online, then by name — so an applied change jumps to the top of the list.
+  const rank = (r: DeviceRow) => (r.blocked ? 0 : 1);
   return [...byMac.values()].sort(
-    (a, b) => Number(b.online) - Number(a.online) || a.name.localeCompare(b.name)
+    (a, b) =>
+      rank(a) - rank(b) ||
+      Number(!!b.reservedIp) - Number(!!a.reservedIp) ||
+      Number(b.online) - Number(a.online) ||
+      a.name.localeCompare(b.name)
   );
 }
 

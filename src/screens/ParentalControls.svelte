@@ -40,6 +40,18 @@
   $: sel = clients.find((c) => c.id === selId) || null;
   $: selRule = sel ? rules[sel.mac] : undefined;
 
+  // Show devices you've acted on first: paused/scheduled jump to the top of the
+  // list so an applied limit is immediately visible.
+  function ruleRank(c: Client): number {
+    const r = rules[c.mac];
+    if (!r || r.mode === 'off') return 2;
+    if (r.mode === 'paused') return 0;
+    return 1; // scheduled
+  }
+  $: sortedClients = [...clients].sort(
+    (a, b) => ruleRank(a) - ruleRank(b) || a.name.localeCompare(b.name)
+  );
+
   function status(c: Client): [string, string] {
     const r = rules[c.mac];
     if (!r || r.mode === 'off') return ['Allowed', 'st-ok'];
@@ -83,7 +95,7 @@
     <div class="panel">
       <div class="panel-h"><h2>Devices</h2><span class="sub">{clients.length}</span></div>
       <div class="panel-b devlist">
-        {#each clients as c}
+        {#each sortedClients as c}
           {@const st = status(c)}
           <button class="devrow2" class:sel={c.id === selId} on:click={() => select(c)}>
             <span class="ic"><Icon name={c.kind} size={18} /></span>

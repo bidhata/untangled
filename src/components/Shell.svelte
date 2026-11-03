@@ -17,6 +17,7 @@
   import ExtendWifi from '../screens/ExtendWifi.svelte';
   import NetworkProtection from '../screens/NetworkProtection.svelte';
   import Vpn from '../screens/Vpn.svelte';
+  import Tailscale from '../screens/Tailscale.svelte';
   import Wan from '../screens/Wan.svelte';
   import Ddns from '../screens/Ddns.svelte';
   import Qos from '../screens/Qos.svelte';
@@ -55,6 +56,7 @@
     extend: ExtendWifi,
     aiprotect: NetworkProtection,
     vpn: Vpn,
+    tailscale: Tailscale,
     wan: Wan,
     ddns: Ddns,
     qos: Qos,

@@ -5,7 +5,7 @@ import { call } from './ubus';
 export type DeviceKind =
   | 'd-phone' | 'd-laptop' | 'd-desktop' | 'd-tv' | 'd-game'
   | 'd-speaker' | 'd-tablet' | 'd-printer' | 'd-router' | 'd-cloud' | 'd-generic';
-export type Band = '5' | '24' | 'wired' | '?';
+export type Band = '5' | '24' | '6' | 'wired' | '?';
 
 export interface BoardInfo { model: string; hostname: string; firmware: string; }
 export interface SysInfo { uptimeSec: number; load1: number; memUsedPct: number; }
@@ -74,11 +74,22 @@ function guessKind(name: string): DeviceKind {
   return 'd-generic';
 }
 
+// Resolve a radio's band from the `network.wireless status` object. OpenWRT
+// reports it as `config.band` = "2g"/"5g"/"6g" on 21.02+, older builds use
+// `config.hwmode` (11a/11g/…), and as a last resort we infer from the channel.
 function radioBand(radio: any): Band {
-  const b = String(radio?.config?.band || radio?.config?.hwmode || '');
-  if (/5|a/.test(b)) return '5';
-  if (/2|g/.test(b)) return '24';
-  return num(radio?.config?.channel) >= 36 ? '5' : '24';
+  const cfg = radio?.config ?? {};
+  const b = String(cfg.band ?? '').toLowerCase();
+  if (b.includes('6')) return '6';
+  if (b.includes('5')) return '5';
+  if (b.includes('2')) return '24';
+  const hw = String(cfg.hwmode ?? '').toLowerCase();
+  if (hw.includes('a')) return '5'; // 11a/11ac/11ax-5
+  if (hw.includes('g') || hw.includes('b')) return '24';
+  const ch = num(cfg.channel);
+  if (ch >= 36) return '5';
+  if (ch > 0) return '24';
+  return '?';
 }
 function dbmToBars(dbm: number): number {
   if (dbm >= -55) return 4;
@@ -87,35 +98,64 @@ function dbmToBars(dbm: number): number {
   return dbm ? 1 : 0;
 }
 
-async function getWirelessAssoc(): Promise<Record<string, { band: Band; signal: number }>> {
-  const status = await call<any>('network.wireless', 'status');
+// Returns a map of client MAC -> {band, signal}, plus whether the wireless
+// subsystem actually answered. `ok=false` means we could not read any radio,
+// so callers must NOT assume unlisted devices are wired.
+async function getWirelessAssoc(): Promise<{
+  map: Record<string, { band: Band; signal: number }>;
+  ok: boolean;
+}> {
   const map: Record<string, { band: Band; signal: number }> = {};
-  for (const radio of Object.values<any>(status ?? {})) {
+  let status: any;
+  try {
+    status = await call<any>('network.wireless', 'status');
+  } catch {
+    return { map, ok: false };
+  }
+  const radios = Object.values<any>(status ?? {});
+  if (!radios.length) return { map, ok: false };
+
+  let sawIface = false;
+  const lookups: Promise<void>[] = [];
+  for (const radio of radios) {
     const band = radioBand(radio);
     for (const iface of radio?.interfaces ?? []) {
-      const ifname = iface?.ifname;
+      // ifname sits directly on the interface or under its config, by build.
+      const ifname = iface?.ifname || iface?.config?.ifname || iface?.iface;
       if (!ifname) continue;
-      try {
-        const al = await call<any>('iwinfo', 'assoclist', { device: ifname });
-        for (const r of al?.results ?? []) {
-          if (r?.mac) map[String(r.mac).toUpperCase()] = { band, signal: dbmToBars(num(r.signal)) };
-        }
-      } catch {
-        /* interface may be down */
-      }
+      sawIface = true;
+      lookups.push(
+        call<any>('iwinfo', 'assoclist', { device: ifname })
+          .then((al) => {
+            for (const r of al?.results ?? []) {
+              if (r?.mac) map[String(r.mac).toUpperCase()] = { band, signal: dbmToBars(num(r.signal)) };
+            }
+          })
+          .catch(() => {
+            /* interface may be down or iwinfo missing */
+          })
+      );
     }
   }
-  return map;
+  await Promise.all(lookups);
+  // If radios exist but none exposed an interface we could query, we still
+  // can't tell wired from wireless — report not-ok so devices show Unknown
+  // rather than being mislabeled "Wired".
+  return { map, ok: sawIface };
 }
 
 const MAC_RE = /^([0-9a-f]{2}:){5}[0-9a-f]{2}$/i;
 
 export async function getClients(): Promise<Client[]> {
-  const [hints, leases, assoc] = await Promise.all([
+  const [hints, leases, wifi] = await Promise.all([
     call<any>('luci-rpc', 'getHostHints').catch(() => ({})),
     call<any>('luci-rpc', 'getDHCPLeases').catch(() => ({ dhcp_leases: [] })),
-    getWirelessAssoc().catch(() => ({} as Record<string, { band: Band; signal: number }>))
+    getWirelessAssoc().catch(
+      () => ({ map: {} as Record<string, { band: Band; signal: number }>, ok: false })
+    )
   ]);
+  const assoc = wifi.map;
+  const wifiOk = wifi.ok;
 
   const byMac = new Map<string, Client>();
   const put = (mac: string, patch: Partial<Client>) => {
@@ -143,7 +183,12 @@ export async function getClients(): Promise<Client[]> {
   for (const c of byMac.values()) {
     const a = assoc[c.mac];
     const name = c.name || c.ip || c.mac;
-    out.push({ ...c, name, kind: guessKind(name), band: a ? a.band : 'wired', signal: a ? a.signal : 4 });
+    // A device is wireless if it's in an assoclist. Otherwise it's wired —
+    // but only claim "wired" when the wireless subsystem actually answered;
+    // if it didn't, we genuinely don't know, so report Unknown.
+    const band: Band = a ? a.band : wifiOk ? 'wired' : '?';
+    const signal = a ? a.signal : band === 'wired' ? 4 : 0;
+    out.push({ ...c, name, kind: guessKind(name), band, signal });
   }
   return out.filter((c) => c.ip).sort((a, b) => a.name.localeCompare(b.name));
 }
@@ -156,9 +201,9 @@ export function formatUptime(sec: number): string {
   return d ? `${d}d ${h}h ${m}m` : h ? `${h}h ${m}m` : `${m}m`;
 }
 
-export const bandName: Record<Band, string> = { '5': '5 GHz', '24': '2.4 GHz', wired: 'Wired', '?': 'Unknown' };
-export const bandStroke: Record<Band, string> = { '5': '#0fb5c4', '24': '#f79009', wired: '#17b26a', '?': '#7c8d97' };
-export const bandClass: Record<Band, string> = { '5': 'b5', '24': 'b24', wired: 'bwired', '?': 'bunk' };
+export const bandName: Record<Band, string> = { '5': '5 GHz', '24': '2.4 GHz', '6': '6 GHz', wired: 'Wired', '?': 'Unknown' };
+export const bandStroke: Record<Band, string> = { '5': '#0fb5c4', '24': '#f79009', '6': '#7a5af8', wired: '#17b26a', '?': '#7c8d97' };
+export const bandClass: Record<Band, string> = { '5': 'b5', '24': 'b24', '6': 'b6', wired: 'bwired', '?': 'bunk' };
 
 // ---- Traffic (per-device byte counters from network.device status) ---------
 export interface DevStat {

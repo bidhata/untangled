@@ -68,7 +68,7 @@ export async function loadDualWan(): Promise<DualWanState> {
   };
 }
 
-function ifaceSection(name: string) {
+function ifaceSection() {
   return {
     enabled: '1', family: 'ipv4',
     track_ip: ['8.8.8.8', '1.1.1.1'],
@@ -89,12 +89,13 @@ export async function saveDualWan(mode: DualMode, primary: string, backup: strin
   }
 
   if (mode !== 'off' && primary && backup) {
-    await uciSet('mwan3', primary, ifaceSection(primary)).catch(async () => {
-      await uciAdd('mwan3', 'interface', primary, ifaceSection(primary));
-    });
-    await uciSet('mwan3', backup, ifaceSection(backup)).catch(async () => {
-      await uciAdd('mwan3', 'interface', backup, ifaceSection(backup));
-    });
+    // Recreate the two interface sections cleanly. Delete first so uciAdd
+    // always produces a well-formed, correctly-typed section (a plain uciSet
+    // on a missing named section can leave it untyped on some uci builds).
+    for (const name of [primary, backup]) {
+      await uciDelete('mwan3', name).catch(() => {});
+      await uciAdd('mwan3', 'interface', name, ifaceSection());
+    }
     const pm = `${primary}_m`, bm = `${backup}_m`;
     await uciAdd('mwan3', 'member', pm, { interface: primary, metric: '1', weight: '3' });
     await uciAdd('mwan3', 'member', bm, {
