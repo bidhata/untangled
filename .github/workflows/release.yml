@@ -98,6 +98,11 @@ jobs:
           # names here fails: the SDK runs `make package/<name>/compile` per name
           # and only the source dir `untangled` is a valid target.
           PACKAGES: untangled
+          # Our feed is assembled fresh (not a git checkout), so the action's
+          # init-script shfmt check — which runs `git diff` inside the feed —
+          # errors out (exit 128) and is misreported as "not formatted". We ship
+          # no *.init scripts, so the check is moot; disable it explicitly.
+          NO_SHFMT_CHECK: 1
           V: s
 
       - name: Collect built packages
