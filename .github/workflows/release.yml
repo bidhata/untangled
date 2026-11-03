@@ -132,6 +132,8 @@ jobs:
           PRIVATE_KEY: ${{ secrets.APK_KEY }}
 
       - name: Collect built packages and feed
+        env:
+          HAVE_APK_KEY: ${{ secrets.APK_KEY != '' }}
         run: |
           set -eux
           FMT='${{ matrix.fmt }}'
@@ -148,6 +150,18 @@ jobs:
           cp -r "$FEED_DIR"/. "out/$FMT/feed/"
           find "$FEED_DIR" -type f \( -name 'untangled*.ipk' -o -name 'untangled*.apk' \) \
             -exec cp -v {} "out/$FMT/pkgs/" \;
+          # Signing is silent when the secrets are absent (the SDK just builds
+          # unsigned, or apk signs with a throwaway key). Surface that in the run
+          # summary so an unsigned release never ships unnoticed.
+          if [ "$FMT" = ipk ]; then
+            [ -f "$FEED_DIR/Packages.sig" ] \
+              || echo "::warning title=Unsigned opkg feed::no Packages.sig — the USIGN_KEY repository secret is empty or not visible to this job"
+          else
+            # The index is compressed, so we cannot grep the signature; the
+            # failure mode that matters is an empty/invisible secret.
+            [ "$HAVE_APK_KEY" = true ] \
+              || echo "::warning title=apk feed signed with a throwaway key::the APK_KEY repository secret is empty or not visible to this job"
+          fi
           echo "--- feed ---";  ls -l "out/$FMT/feed"
           echo "--- pkgs ---";  ls -l "out/$FMT/pkgs"
           # Fail loudly if the SDK produced nothing (e.g. feed not picked up).
