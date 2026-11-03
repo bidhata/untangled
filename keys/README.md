@@ -47,3 +47,16 @@ Then:
 
 Signing is optional: with the secrets unset, the workflow still builds and
 publishes unsigned packages (users would then need `--allow-untrusted` for apk).
+
+## One-time repository setup: enable GitHub Pages
+
+The feed is served from GitHub Pages. The workflow token can **deploy** to a
+Pages site but is not allowed to **create** one, so enable it once by hand:
+
+**Settings → Pages → Build and deployment → Source: "GitHub Actions"**
+
+Until this is done the `Publish package feed` job fails with
+`Create Pages site failed ... Resource not accessible by integration`.
+After enabling, open the failed run in the Actions tab and choose
+**Re-run failed jobs** (the build artifacts are still attached, so no new
+release is needed), or simply push the next tag.
