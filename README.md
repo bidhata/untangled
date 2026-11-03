@@ -53,6 +53,24 @@ Prefer a file? Every release attaches raw `.ipk` (stable) and `.apk` (snapshot) 
 
 > 🖱️ **No router handy?** [Click through the live demo](https://bidhata.github.io/untangled/demo/) — the full UI with sample data, in your browser.
 
+## Requirements & hardware support
+
+UnTangled is an **OpenWRT** interface. It does not run on stock vendor firmware, DD-WRT, pfSense or similar.
+
+**Runs on** any device with **OpenWRT 23.05, 24.10, or snapshot**, on **any CPU architecture** (the UI package is `PKGARCH:=all`), with room for its dependencies: `uhttpd`, `uhttpd-mod-ubus`, `rpcd`, `rpcd-mod-file`, `rpcd-mod-luci`. The UI itself is ~75 KB gzipped and runs in your browser, so it adds little to router RAM.
+
+**You'll want ≈ 8 MB+ of free flash.** On very small devices (the old 4/32 MB class) the base dependencies may not fit — that's a device limitation, not an UnTangled one.
+
+**Features light up when their OpenWRT package is present, and stay out of the way when it isn't.** Each advanced screen degrades to a one-click "install …" card instead of breaking:
+
+| Feature | Needs |
+|---|---|
+| Wi-Fi scan / signal, HTTPS, firmware upgrade, Wake-on-LAN | `untangled-full` (pulls `rpcd-mod-iwinfo`, `cgi-io`, mbedtls + `px5g`, `etherwake`) |
+| QoS · Dynamic DNS · UPnP · Dual-WAN · USB sharing · Usage history | `sqm-scripts` · `ddns-scripts` · `miniupnpd-nftables` · `mwan3` · `ksmbd`/`minidlna` · `vnstat` + `nlbwmon` |
+| Mesh Wi-Fi · Tailscale | `untangled-mesh` · `tailscale` |
+
+> **Beta.** Verified on OpenWRT 23.05 and snapshot container images (install, serving, signed feed). **Not yet validated across physical routers** — behaviour that depends on live radios, clients and vendor Wi-Fi drivers may vary by device. Mesh is OpenWRT-to-OpenWRT only and is **not** certified Multi-AP/prplMesh. Please [open an issue](https://github.com/bidhata/untangled/issues) with your model if something looks off.
+
 ---
 
 ## Why UnTangled?
