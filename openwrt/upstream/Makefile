@@ -83,8 +83,10 @@ define Package/untangled-full
 endef
 
 define Package/untangled-full/description
-  Meta-package: UnTangled core plus Wi-Fi scan/association info, firmware
-  upgrade (rpc-sys + cgi-io), Wake-on-LAN (etherwake), and TLS for HTTPS.
+  Meta-package (ships no files of its own — it just pulls in the core UI plus
+  the extras below; the small package size is expected). UnTangled core plus
+  Wi-Fi scan/association info, firmware upgrade (rpc-sys + cgi-io), Wake-on-LAN
+  (etherwake), and TLS for HTTPS.
 
   Optional feature screens install their backing package on demand (each
   degrades to an "install X" prompt when absent): QoS -> sqm-scripts,
