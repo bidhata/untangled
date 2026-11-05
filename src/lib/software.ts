@@ -94,11 +94,14 @@ function parseOpkg(out: string): Pkg[] {
 }
 
 async function listViaExec(): Promise<Pkg[] | null> {
-  // Prefer apk (24.10+); fall back to opkg (23.05 and earlier).
-  const apk = await exec('apk', ['list', '--installed']);
-  if (apk) {
-    const pkgs = parseApk(apk);
-    if (pkgs.length) return pkgs;
+  // Prefer apk (24.10+); fall back to opkg (23.05 and earlier). apk's installed
+  // flag is `--installed` on some builds and `-I` on others, so try both.
+  for (const args of [['list', '--installed'], ['list', '-I']]) {
+    const apk = await exec('apk', args);
+    if (apk) {
+      const pkgs = parseApk(apk);
+      if (pkgs.length) return pkgs;
+    }
   }
   const opkg = await exec('opkg', ['list-installed']);
   if (opkg) {
@@ -145,7 +148,9 @@ export async function listPackages(): Promise<SoftwareList> {
     managed: false,
     packages: [],
     message:
-      'Could not read the package list. Install the `untangled-full` package (it adds file access) to view and manage software here.'
+      "Could not read the package list. This router's package manager " +
+      "(apk/opkg) did not respond — check that the UnTangled ACL allows " +
+      '`file.exec`, or install the `untangled` package helper for managed installs.'
   };
 }
 

@@ -12,6 +12,7 @@ export interface Feature {
   option: string;
   installed: boolean;
   enabled: boolean;
+  link?: string;   // for services run from their own UI (e.g. AdGuard Home)
 }
 
 const DEFS: Omit<Feature, 'installed' | 'enabled'>[] = [
@@ -39,7 +40,27 @@ export async function loadProtection(): Promise<Feature[]> {
       out.push({ ...d, installed: false, enabled: false });
     }
   }
+  out.push(await loadAdGuard());
   return out;
+}
+
+// AdGuard Home runs its own daemon and web UI (default :3000), so it's not a
+// UCI toggle like adblock/banip. Detect it via its `adguardhome` uci config and
+// link out to its interface rather than show a switch that couldn't control it.
+async function loadAdGuard(): Promise<Feature> {
+  const base: Omit<Feature, 'installed' | 'enabled'> = {
+    id: 'adguardhome', label: 'AdGuard Home', pkg: 'adguardhome',
+    desc: 'Network-wide DNS ad & tracker blocking, managed in its own dashboard.',
+    config: 'adguardhome', section: 'config', option: 'enabled',
+    link: `${location.protocol}//${location.hostname}:3000/`
+  };
+  try {
+    const r = await call<any>('uci', 'get', { config: 'adguardhome' });
+    const g = findGlobal(r?.values, 'adguardhome');
+    return { ...base, installed: true, enabled: (g?.s?.enabled ?? '1') === '1' };
+  } catch {
+    return { ...base, installed: false, enabled: false };
+  }
 }
 
 export async function setFeature(f: Feature, on: boolean): Promise<void> {

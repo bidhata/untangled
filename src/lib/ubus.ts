@@ -124,3 +124,11 @@ export function uciConfirm() {
 export function uciRollback() {
   return call('uci', 'rollback', {});
 }
+
+/** Apply firewall UCI and make nftables reflect it. `uci apply` alone does not
+ *  reliably rebuild fw4's ruleset for added/removed rules, so kick the service
+ *  like the other service paths do (usb/system/ddns). Best-effort reload. */
+export async function firewallApply(rollback = false, timeout = 120) {
+  await (rollback ? uciApplyRollback(timeout) : uciApply());
+  await call('file', 'exec', { command: '/etc/init.d/firewall', params: ['reload'] }).catch(() => {});
+}

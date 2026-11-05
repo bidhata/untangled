@@ -1,6 +1,6 @@
-# UnTangled — AI handoff / project memory
+# UnTangled — Developer Handoff Notes
 
-Consolidated context for any AI assistant continuing this project. Keep it
+Consolidated context for anyone picking this project back up. Keep it
 current: edit this file when a decision or state changes, and commit it.
 Last updated: 2026-11-03.
 
@@ -16,6 +16,12 @@ feed. Verified in real OpenWRT containers: `usign -V` on
 rootfs with `check_signature` on and **no `--allow-untrusted`**; `apk verify`
 on the snapshot `.apk` = OK with `keys/untangled.pem`, UNTRUSTED without it.
 `/keys/`, `stable/Packages.sig`, `snapshot/packages.adb` all HTTP 200.
+
+> **NOTE (2026-11-04): the signing OPEN TASK below is DONE** — v0.1.9 shipped
+> signed + verified (feed AND release assets). Follow-up #1 (unsigned release
+> assets) is resolved; #2 (snapshot apk layout) still stands. The next
+> owner-chosen task is **hardware validation**, now that `docs/HARDWARE_MATRIX.md`
+> exists to record it. See the 2026-11-04 entry at the bottom.
 
 **Remaining follow-ups (not blocking):**
 1. **Release-page assets still unsigned.** A `workflow_dispatch` redeploys the
@@ -80,3 +86,116 @@ For `bhuci-project`, the audience is **both non-technical home users AND technic
 - Default path stays simple and task-based (hide relayd/WDS/proto/kmod/subnet jargon behind flows like "Extend Wi-Fi", "Open access to a device"). Sensible defaults, one decision per screen, reassuring success states.
 - Serve techies too: keep full control reachable, and put deep technical truth in an **"Advanced details"** disclosure on each screen.
 - **Per-field help:** every form field gets a small `?` beside its label; on hover/focus it shows a plain-language tooltip. Reusable `.help`/`.tip` CSS component + a `help(text)` JS helper build the markup. This is the bridge between the two audiences — use it on every new form field.
+
+
+---
+
+**2026-11-04 — SQM copy fix + hardware/roaming matrix (docs/UI-copy only, no release).**
+Prompted by a field-knowledgeable user note (networking pro) covering four
+areas. Validated each against the actual code, then made the two smallest
+high-value changes and recorded decisions for the rest.
+
+- **SQM/cake — "measured, not plan" copy fix.** `src/screens/Qos.svelte` field
+  labels are now "Measured download/upload speed" (were bare "Download/Upload
+  speed"), plus an always-visible hint ("use a real speed test, not the plan you
+  pay for; set a bit below the result") so the warning lands without opening the
+  `?`. Tooltips now say ~90–95% down / **~85–90% up** (upload is the dominant
+  factor for call/gaming lag and wants a tighter margin). `src/lib/qos.ts`
+  comments corrected from "plan rates" → measured rates. **Why it matters:** if
+  users type the sticker/marketing speed, cake shapes above the real line rate
+  and polices the wrong queue — bufferbloat comes back and SQM looks broken.
+  DO NOT "simplify" these labels back to "Download speed". `svelte-check` clean.
+  Not yet wired (deferred, low priority): `diffserv4` + per-host fairness
+  (`nat dual-dsthost`/`dual-srchost`) for the NAT-gateway case — would go behind
+  the existing "Advanced details" disclosure, not the default path.
+
+- **Hardware/roaming support matrix — new `docs/HARDWARE_MATRIX.md`**
+  (cross-referenced from CODEBASE_MEMORY §11). Tables: roaming (802.11k/v/r) per
+  driver, mesh, and a **Known-broken** section. Seeded with the real driver
+  families (`ath9k`/`ath10k`(-ct)/`ath11k`/`mt76`) and both target releases
+  (23.05, 24.10). Everything starts ❔ **untested** — honest, since nothing is
+  hardware-validated yet, and gives field reporters (e.g. @spdixit) one
+  greppable place to file results. File-a-result steps point at
+  `ROUTER=<ip> npm run dev` (live ubus; containers have no radios).
+
+- **DECISION — 802.11r (FT) stays opt-in; 802.11k/v are the safe default.**
+  k (neighbor reports) + v (BSS transition) give most of the roaming benefit
+  with far less driver/client breakage; FT can validate clean in config and
+  still break roaming on specific driver+client combos. **Known divergence held
+  deliberately:** the mesh helper (`untangled.mesh` `set_roaming` /
+  `set_role controller`) currently flips `ieee80211r='1'` *together* with k/v.
+  Leaving that as-is on purpose until ≥2 boards are in the matrix — do NOT
+  "fix" it either way (not silently-on, not ripped out) without hardware data.
+  It is already conservative: `ft_over_ds='0'` + `ft_psk_generate_local='1'`,
+  and it never touches SSID/key so it can't lock out the admin.
+
+- **DECISION — rollback-confirm is the locked keeper feature.** The owner would
+  keep auto-rollback over everything else; it's the Junos `commit confirmed` /
+  IOS-XE revert-timer muscle memory. Hard invariant to preserve: router timer
+  (120s, `uciApplyRollback`) must stay LONGER than the UI countdown (90s,
+  `startRollbackConfirm`), and "Keep" must round-trip over the same path the
+  change can break (that round-trip IS the connectivity proof). See CODEBASE
+  §8. Don't narrow which saves arm it (Wireless/WAN/LAN/Firewall zones/DMZ)
+  without re-deriving the lockout reasoning.
+
+- **CONFIRMED-right, no change:** LuCI stays side-by-side at `/` (new UI under
+  `/www/untangled`) — the escape hatch if the new UI wedges; pairs with
+  rollback. Keep it through beta; no hard cutover.
+---
+
+**2026-11-05 — field-report fixes from u/venkatx5 (Reddit). Code on `main`, NOT yet tagged/released.**
+Seven install-feedback items. Audited each against the actual source before
+touching anything (two were missing features, not bugs; one claim I could not
+fully root-cause without hardware — flagged honestly). Smallest-complete-change
+discipline throughout; `svelte-check` + `vite build` clean.
+
+- **Block-internet + Parental Controls "didn't block" — THE key bug.** Both
+  write an fw4 `config rule` then applied via bare `uci apply`, which does not
+  reliably rebuild the nftables ruleset for an added/removed rule — so the rule
+  existed in UCI but nftables never changed. Fixed once in shared code: new
+  `firewallApply(rollback?, timeout?)` in `src/lib/ubus.ts` runs the apply then
+  `/etc/init.d/firewall reload`, matching how usb/system/ddns already kick their
+  services. Wired into every firewall-config write: `devices.setBlocked`, all of
+  `parental.ts`, and `firewall.ts` (zones/DMZ keep `rollback=true`). See
+  CODEBASE §8. **Unverified on hardware** — if a given build's `uci apply`
+  already triggered fw4, the extra reload is a harmless redundant reload.
+
+- **Samba4 not detected.** `usb.ts loadSmb` only read the `ksmbd` uci config;
+  now `loadSmbFrom` probes `ksmbd` then `samba` (samba4). Writes still target
+  ksmbd (unchanged).
+
+- **No device rename.** New `renameDevice()` writes the dhcp host `name`
+  (creates a host entry if there's no reservation). Devices table: ✎ on hover →
+  inline edit → Save. Was a genuinely missing feature, not a bug.
+
+- **AdGuard Home not detected.** Added `adguardhome` uci detection to
+  `protection.ts`. AGH runs its own daemon + web UI, so it is surfaced as an
+  "Open ›" link to `:3000` (new optional `Feature.link`), NOT a UCI toggle that
+  couldn't actually control it. Port 3000 assumed (AGH default); wrong if moved.
+
+- **No "create firewall rule".** Firewall screen only edited zone policies.
+  Added generic `config rule` CRUD (`loadRules/addRule/saveRule/deleteRule`,
+  excludes `Block:`/`Parental:` rules owned by other screens) + a Traffic-rules
+  panel: name, from→to zone, proto, dest port, action, and optional source
+  match (MAC/IP/src port). **This amends the "hard-defer raw firewall rules"
+  line in CODEBASE §10** — kept it plain-language, NOT raw nftables (that defer
+  still stands). No inline MAC/IP format validation yet (uci rejects at apply).
+
+- **No config backup.** Firmware screen now has Download backup
+  (`sysupgrade -b` → cgi-download) + Restore (cgi-upload → `sysupgrade -r` →
+  reboot), in `src/lib/firmware.ts`. **Closes the "Administration backup-restore
+  divergence" backlog item** (built on Firmware, where the complaint was filed).
+  Needs cgi-io (already in `untangled-full`). **Unverified on hardware.**
+
+- **Software "install untangled-full" dead-end.** The message told a user who
+  already had `untangled-full` to install it. Now names the real cause
+  (package manager/ACL/`file.exec`) and tries both `apk list --installed` and
+  `apk list -I` before falling back to opkg. Root cause of *why* apk returned
+  nothing on the reporter's box is still unconfirmed (needs the device).
+
+- **Credited u/venkatx5 in README** Credits, beside @spdixit.
+
+- **Still NOT validated on a real router.** The three behavioural fixes (fw4
+  reload, backup/restore, AGH link) are the ones to confirm first via
+  `ROUTER=<ip> npm run dev`: block a device then check `nft list ruleset`;
+  download+restore a backup; confirm AGH port.

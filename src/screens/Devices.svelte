@@ -4,7 +4,7 @@
   import Icon from '../components/Icon.svelte';
   import { bandName, bandClass } from '../lib/net';
   import {
-    loadDevices, reserveIp, removeReservation, setBlocked, wake, type DeviceRow
+    loadDevices, reserveIp, removeReservation, renameDevice, setBlocked, wake, type DeviceRow
   } from '../lib/devices';
   import { toast } from '../lib/toast';
 
@@ -12,6 +12,8 @@
   let loading = true;
   let error = '';
   let busy = ''; // mac currently being acted on
+  let editing = ''; // mac whose name is being edited
+  let draftName = '';
 
   async function load() {
     loading = true;
@@ -54,6 +56,13 @@
     catch { toast('Could not wake device — install the "etherwake" package'); }
     finally { busy = ''; }
   }
+  function startRename(r: DeviceRow) { editing = r.mac; draftName = r.name === r.mac ? '' : r.name; }
+  async function saveRename(r: DeviceRow) {
+    busy = r.mac;
+    try { await renameDevice(r.mac, draftName, r.reserveId); editing = ''; toast('Device renamed'); await load(); }
+    catch { toast('Could not rename the device'); }
+    finally { busy = ''; }
+  }
 </script>
 
 <div class="page-head">
@@ -89,7 +98,16 @@
                 <div class="cname">
                   <span class="mi"><Icon name={r.kind} size={17} /></span>
                   <span>
-                    <b>{r.name}</b>
+                    {#if editing === r.mac}
+                      <span class="renamebox">
+                        <input class="nameden" type="text" bind:value={draftName} placeholder="Device name" spellcheck="false" />
+                        <button class="btn sm" on:click={() => saveRename(r)} disabled={busy === r.mac}>Save</button>
+                        <button class="btn sm ghost" title="Cancel" on:click={() => (editing = '')} disabled={busy === r.mac}>✕</button>
+                      </span>
+                    {:else}
+                      <b>{r.name}</b>
+                      <button class="renamebtn" title="Rename device" on:click={() => startRename(r)}>✎</button>
+                    {/if}
                     <small class="mono">{r.mac}{#if !r.online} · offline{/if}</small>
                   </span>
                 </div>
@@ -150,4 +168,8 @@
   .ipin { min-width: 128px; width: 128px; padding: 6px 8px; font-family: var(--font-mono); font-size: 12px; }
   .btn.sm { padding: 6px 10px; font-size: 12px; display: inline-flex; align-items: center; gap: 5px; }
   .btn.sm.ghost { padding: 6px 9px; color: var(--muted); }
+  .renamebtn { background: none; border: 0; color: var(--muted); cursor: pointer; padding: 0 4px; font-size: 12px; opacity: 0; }
+  .cname:hover .renamebtn { opacity: 1; }
+  .renamebox { display: inline-flex; gap: 6px; align-items: center; }
+  .nameden { min-width: 150px; padding: 5px 8px; font-size: 13px; }
 </style>
