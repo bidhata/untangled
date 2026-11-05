@@ -36,9 +36,12 @@ async function readMounts(): Promise<UsbMount[]> {
   return out;
 }
 
-async function loadSmb(): Promise<ShareSvc> {
+// Both OpenWRT SMB servers use a `config share` section with name/path, so one
+// reader covers ksmbd and samba4 (config `samba`). We write via ksmbd, so a
+// detected samba4 share counts as installed/enabled but keeps its own id/config.
+async function loadSmbFrom(config: string): Promise<ShareSvc | null> {
   try {
-    const r = await uciGet('ksmbd');
+    const r = await uciGet(config);
     const v = (r as any)?.values ?? r ?? {};
     let id: string | null = null, path = '', enabled = false;
     for (const [sid, s] of Object.entries<any>(v)) {
@@ -48,8 +51,14 @@ async function loadSmb(): Promise<ShareSvc> {
     }
     return { installed: true, enabled, path, id };
   } catch {
-    return { installed: false, enabled: false, path: '', id: null };
+    return null;
   }
+}
+
+async function loadSmb(): Promise<ShareSvc> {
+  return (await loadSmbFrom('ksmbd'))
+    ?? (await loadSmbFrom('samba'))
+    ?? { installed: false, enabled: false, path: '', id: null };
 }
 
 async function loadDlna(): Promise<ShareSvc> {

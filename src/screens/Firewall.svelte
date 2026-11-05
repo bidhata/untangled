@@ -1,17 +1,24 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import Help from '../components/Help.svelte';
-  import { loadFirewall, saveZone, type FwZone, type FwForward, type Policy } from '../lib/firewall';
+  import { loadFirewall, saveZone, loadRules, addRule, saveRule, deleteRule, type FwZone, type FwForward, type FwRule, type Policy } from '../lib/firewall';
   import { toast } from '../lib/toast';
   import { startRollbackConfirm } from '../lib/confirm';
 
   let zones: FwZone[] = [];
   let originals: FwZone[] = [];
   let forwards: FwForward[] = [];
+  let rules: FwRule[] = [];
   let loading = true;
   let error = '';
   let busy = false;
   const POLICIES: Policy[] = ['ACCEPT', 'REJECT', 'DROP'];
+  const PROTOS = ['any', 'tcp', 'udp', 'tcp udp'];
+
+  let draft: Omit<FwRule, 'id'> | null = null;
+  function newRule() {
+    draft = { name: '', src: zones[0]?.name ?? 'lan', dest: 'wan', proto: 'any', destPort: '', target: 'ACCEPT', enabled: true, srcMac: '', srcIp: '', srcPort: '' };
+  }
 
   async function load() {
     loading = true;
@@ -19,6 +26,7 @@
       const r = await loadFirewall();
       zones = r.zones;
       forwards = r.forwards;
+      rules = await loadRules();
       originals = zones.map((z) => ({ ...z }));
       error = '';
     } catch {
@@ -46,6 +54,26 @@
     } finally {
       busy = false;
     }
+  }
+
+  async function saveDraft() {
+    if (!draft || !draft.name.trim()) { toast('Give the rule a name'); return; }
+    busy = true;
+    try { await addRule(draft); draft = null; toast('Rule added'); await load(); }
+    catch { toast('Could not add the rule'); }
+    finally { busy = false; }
+  }
+  async function toggleRule(r: FwRule) {
+    busy = true;
+    try { await saveRule({ ...r, enabled: !r.enabled }); await load(); }
+    catch { toast('Could not update the rule'); }
+    finally { busy = false; }
+  }
+  async function removeRule(r: FwRule) {
+    busy = true;
+    try { await deleteRule(r.id); toast('Rule removed'); await load(); }
+    catch { toast('Could not remove the rule'); }
+    finally { busy = false; }
   }
 </script>
 
@@ -85,6 +113,64 @@
     </div>
   {/each}
 
+  <div class="panel" style="margin-bottom:16px">
+    <div class="panel-h"><h2>Traffic rules</h2>
+      <button class="btn sm" on:click={newRule} disabled={busy || !!draft}>+ Add rule</button>
+    </div>
+    <div class="panel-b" style="padding-top:0">
+      <div style="overflow-x:auto"><table class="clients">
+        <thead><tr><th>Name</th><th>From → To</th><th>Match</th><th>Action</th><th style="text-align:right"></th></tr></thead>
+        <tbody>
+          {#if draft}
+            <tr>
+              <td><input type="text" bind:value={draft.name} placeholder="e.g. Allow SSH" style="min-width:130px" /></td>
+              <td>
+                <select bind:value={draft.src}>{#each zones as z}<option value={z.name}>{z.name}</option>{/each}</select>
+                →
+                <select bind:value={draft.dest}>{#each zones as z}<option value={z.name}>{z.name}</option>{/each}</select>
+              </td>
+              <td>
+                <select bind:value={draft.proto}>{#each PROTOS as p}<option value={p}>{p}</option>{/each}</select>
+                <input type="text" bind:value={draft.destPort} placeholder="port" style="width:70px" />
+              </td>
+              <td><select bind:value={draft.target}>{#each POLICIES as p}<option value={p}>{p}</option>{/each}</select></td>
+              <td style="text-align:right;white-space:nowrap">
+                <button class="btn sm primary" on:click={saveDraft} disabled={busy}>Save</button>
+                <button class="btn sm ghost" on:click={() => (draft = null)} disabled={busy}>✕</button>
+              </td>
+            </tr>
+            <tr class="srcrow">
+              <td class="hint">Limit source <span class="opt">(optional)</span></td>
+              <td colspan="4">
+                <input type="text" bind:value={draft.srcMac} placeholder="MAC" style="width:150px" spellcheck="false" />
+                <input type="text" bind:value={draft.srcIp} placeholder="IP" style="width:130px" spellcheck="false" />
+                <input type="text" bind:value={draft.srcPort} placeholder="src port" style="width:80px" spellcheck="false" />
+              </td>
+            </tr>
+          {/if}
+          {#each rules as r (r.id)}
+            <tr class:offline={!r.enabled}>
+              <td><b>{r.name || '(unnamed)'}</b></td>
+              <td>
+                {r.src || 'any'} → {r.dest || 'any'}
+                {#if r.srcMac || r.srcIp || r.srcPort}<div class="hint mono">from {[r.srcMac, r.srcIp, r.srcPort && ':' + r.srcPort].filter(Boolean).join(' ')}</div>{/if}
+              </td>
+              <td class="mono">{r.proto}{#if r.destPort} :{r.destPort}{/if}</td>
+              <td><span class="chip">{r.target}</span></td>
+              <td style="text-align:right;white-space:nowrap">
+                <button class="btn sm" on:click={() => toggleRule(r)} disabled={busy}>{r.enabled ? 'Disable' : 'Enable'}</button>
+                <button class="btn sm ghost" title="Delete rule" on:click={() => removeRule(r)} disabled={busy}>✕</button>
+              </td>
+            </tr>
+          {/each}
+          {#if !rules.length && !draft}
+            <tr><td colspan="5" style="color:var(--muted);padding:18px">No custom rules yet. Device blocks and parental schedules are managed on their own screens.</td></tr>
+          {/if}
+        </tbody>
+      </table></div>
+    </div>
+  </div>
+
   <div class="panel">
     <div class="panel-h"><h2>Zone forwarding</h2><span class="sub">who can reach whom</span></div>
     <div class="panel-b">
@@ -93,5 +179,14 @@
       {:else}<span class="hint">No forwarding rules.</span>{/if}
     </div>
   </div>
-  <details class="adv" style="max-width:860px"><summary>Advanced details</summary><div class="advb">Zones and policies map to <span class="mono">config zone</span> / <span class="mono">forwarding</span> in <span class="mono">/etc/config/firewall</span>, compiled to nftables by fw4. Per-rule and port-forward editing live on their own screens.</div></details>
+  <details class="adv" style="max-width:860px"><summary>Advanced details</summary><div class="advb">Zones and policies map to <span class="mono">config zone</span> / <span class="mono">forwarding</span> in <span class="mono">/etc/config/firewall</span>, compiled to nftables by fw4. Traffic rules above are <span class="mono">config rule</span> entries; port forwards live on their own screen.</div></details>
 {/if}
+
+<style>
+  .btn.sm { padding: 6px 10px; font-size: 12px; }
+  .btn.sm.ghost { color: var(--muted); }
+  tr.offline b { color: var(--muted); }
+  tr.srcrow td { border-top: 0; padding-top: 0; }
+  tr.srcrow input { margin-right: 6px; }
+  .opt { color: var(--muted); font-weight: 400; }
+</style>

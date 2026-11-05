@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import Help from '../components/Help.svelte';
-  import { firmwareInfo, uploadFirmware, testFirmware, flashFirmware, cleanFirmware, type FwInfo } from '../lib/firmware';
+  import { firmwareInfo, uploadFirmware, testFirmware, flashFirmware, cleanFirmware, downloadBackup, restoreBackup, type FwInfo } from '../lib/firmware';
   import { formatBytes } from '../lib/net';
   import { toast } from '../lib/toast';
 
@@ -61,6 +61,25 @@
     await cleanFirmware();
     file = null; stage = 'pick'; validMsg = ''; sizeStr = '';
   }
+
+  let backupBusy = false;
+  let restoreBusy = false;
+  async function doBackup() {
+    backupBusy = true;
+    try { await downloadBackup(); toast('Backup downloaded'); }
+    catch (e: any) { toast(e?.message === 'cgi-io missing' ? 'Needs the "cgi-io" package' : 'Could not create the backup'); }
+    finally { backupBusy = false; }
+  }
+  async function onRestore(e: Event) {
+    const f = (e.target as HTMLInputElement).files?.[0];
+    (e.target as HTMLInputElement).value = '';
+    if (!f) return;
+    if (!confirm('Restore this backup? The router will reboot and replace its current settings.')) return;
+    restoreBusy = true;
+    try { await restoreBackup(f); toast('Restoring — the router will reboot.'); }
+    catch (e: any) { toast(e?.message === 'cgi-io missing' ? 'Needs the "cgi-io" package' : 'Could not restore the backup'); }
+    finally { restoreBusy = false; }
+  }
 </script>
 
 <div class="page-head"><div><div class="breadcrumb">Advanced Settings</div><h1>Firmware</h1><p>Install a new OpenWRT image on your router.</p></div></div>
@@ -75,6 +94,16 @@
     <div class="panel-b">
       <div class="kv"><span class="l">Model</span><span class="r">{info?.model}</span></div>
       <div class="kv"><span class="l">Firmware</span><span class="r">{info?.firmware}</span></div>
+    </div>
+  </div>
+
+  <div class="panel" style="max-width:720px;margin-bottom:16px">
+    <div class="panel-h"><h2>Backup &amp; restore</h2></div>
+    <div class="panel-b">
+      <div class="form-row"><div class="lbl">Backup settings<Help text="Downloads a .tar.gz of your router's configuration (/etc). Keep it safe — you can restore it after a reset or on a replacement router of the same model." /></div>
+        <div class="ctl"><button class="btn" on:click={doBackup} disabled={backupBusy}>{backupBusy ? 'Preparing…' : 'Download backup'}</button></div></div>
+      <div class="form-row" style="border-bottom:0"><div class="lbl">Restore settings<Help text="Uploads a backup archive and applies it, then reboots. Restore only a backup from this same model." /></div>
+        <div class="ctl"><label class="btn" style="cursor:pointer">{restoreBusy ? 'Restoring…' : 'Choose backup…'}<input type="file" accept=".tar.gz,.tgz,.tar" on:change={onRestore} disabled={restoreBusy} style="display:none" /></label></div></div>
     </div>
   </div>
 

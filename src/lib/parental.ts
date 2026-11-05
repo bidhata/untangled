@@ -2,7 +2,7 @@
 // A device's limit is one firewall `rule` (src lan -> dest wan, src_mac, target REJECT):
 //   - paused    : rule active all the time (blocks now)
 //   - scheduled : rule active on selected weekdays between start/stop (blocks then)
-import { call, uciSet, uciAdd, uciDelete, uciApply } from './ubus';
+import { call, uciSet, uciAdd, uciDelete, firewallApply } from './ubus';
 
 export const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -59,7 +59,7 @@ export async function pauseDevice(mac: string, name: string, existingId: string 
   } else {
     await uciAdd('firewall', 'rule', undefined, base);
   }
-  await uciApply();
+  await firewallApply();
 }
 
 /** Block the device on the given days between from–to (same-day window). */
@@ -77,11 +77,11 @@ export async function scheduleDevice(
   } else {
     await uciAdd('firewall', 'rule', undefined, values);
   }
-  await uciApply();
+  await firewallApply();
 }
 
 /** Remove all limits for the device. */
 export async function clearDevice(id: string): Promise<void> {
   await uciDelete('firewall', id);
-  await uciApply();
+  await firewallApply();
 }

@@ -2,7 +2,7 @@
 // and Wake-on-LAN. Reservations and blocks are plain UCI, so they work on a
 // stock router. WoL uses file.exec and needs the `etherwake` package; it fails
 // gracefully (a toast) when that isn't installed.
-import { call, uciGet, uciAdd, uciSet, uciDelete, uciApply } from './ubus';
+import { call, uciGet, uciAdd, uciSet, uciDelete, uciApply, firewallApply } from './ubus';
 import { getClients, type Client, type Band, type DeviceKind } from './net';
 
 const BLOCK_PREFIX = 'Block:';
@@ -121,6 +121,16 @@ export async function removeReservation(id: string): Promise<void> {
   await uciApply();
 }
 
+/** Rename a device: set the `name` on its dhcp `host` entry (creating one if
+ *  there's no reservation yet). An empty name clears it. Hostnames allow only
+ *  letters, digits and hyphens. */
+export async function renameDevice(mac: string, name: string, existingId: string | null): Promise<void> {
+  const hn = name.trim().replace(/[^A-Za-z0-9-]+/g, '-').replace(/^-+|-+$/g, '');
+  if (existingId) await uciSet('dhcp', existingId, { name: hn });
+  else if (hn) await uciAdd('dhcp', 'host', undefined, { mac: mac.toUpperCase(), name: hn });
+  await uciApply();
+}
+
 /** Block or unblock a device's internet access with an fw4 rule (by MAC). */
 export async function setBlocked(mac: string, name: string, blocked: boolean, existingId: string | null): Promise<void> {
   if (blocked) {
@@ -133,7 +143,7 @@ export async function setBlocked(mac: string, name: string, blocked: boolean, ex
   } else if (existingId) {
     await uciDelete('firewall', existingId);
   }
-  await uciApply();
+  await firewallApply();
 }
 
 async function execOnce(command: string, params: string[]): Promise<void> {

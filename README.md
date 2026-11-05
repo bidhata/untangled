@@ -223,6 +223,11 @@ Website: <https://bidhata.github.io/untangled/> · Source: <https://github.com/b
 Thanks to **[@spdixit](https://github.com/spdixit)** for field testing and bug reports
 (device band/connection detection, applied-item ordering, and installed-app visibility).
 
+Thanks to **[u/venkatx5](https://www.reddit.com/user/venkatx5/)** for install feedback and bug
+reports (device internet blocking and parental controls, Samba4 storage detection, device
+renaming, AdGuard Home detection, firewall rule creation, config backup, and package-list
+detection for `untangled-full`).
+
 ---
 
 <div align="center">

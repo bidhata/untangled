@@ -1,11 +1,11 @@
-# UnTangled — Codebase Memory
+# UnTangled — Codebase Notes
 
-Structured reference for any AI assistant working on this project. This is the
-durable "what/where/why" map; the running narrative lives in `HANDOFF.md`, and
-the open task of the moment is always at the **top of `HANDOFF.md`**.
+The durable "what/where/why" map for this project. The running narrative lives
+in `HANDOFF.md`, and the current open task is always at the **top of
+`HANDOFF.md`**.
 
 Keep this file current when structure, conventions, or key decisions change.
-Last updated: 2026-11-03 (v0.1.9 released; signing done; field-report fixes + review hardening + upstream draft + layman install/package docs).
+Last updated: 2026-11-05 (field-report fixes from u/venkatx5: firewall reload after fw4 writes; Samba4 detection; device rename; AdGuard Home detect+link-out; firewall traffic-rule CRUD w/ source match; config backup/restore. Reverses two prior "locked"/backlog items — see §10. Not yet pushed-tag; code-only.).
 
 ---
 
@@ -85,7 +85,7 @@ devices, plugin-aware), `Login.svelte` (`session.login`), `Help.svelte`
 
 ### Lib layer (`src/lib/`)
 Core plumbing:
-- `ubus.ts` — ubus JSON-RPC client (`session.login`, call wrapper) + UCI helpers: `uciGet/Set/Add/Delete`, `uciApply` (commit+reload, no rollback), `uciApplyRollback(timeout)/uciConfirm/uciRollback`.
+- `ubus.ts` — ubus JSON-RPC client (`session.login`, call wrapper) + UCI helpers: `uciGet/Set/Add/Delete`, `uciApply` (commit+reload, no rollback), `uciApplyRollback(timeout)/uciConfirm/uciRollback`, **`firewallApply(rollback?, timeout?)`** (applies then kicks `/etc/init.d/firewall reload` — `uci apply` alone does NOT reliably rebuild fw4 for added/removed rules; all firewall-config writes must use this, not bare `uciApply`).
 - `stores.ts` — Svelte stores: session, theme, current route.
 - `nav.ts` — the sidebar nav tree (groups → items with id/label/icon). `titles` map derived from it.
 - `toast.ts` — toast store (paired with `Toasts.svelte`).
@@ -95,15 +95,19 @@ Core plumbing:
 
 Per-feature data libs (each paired with a screen; most degrade to an
 "install &lt;pkg&gt;" card when the underlying package/uci config is absent):
-`net.ts` (board/sysinfo/wan/clients), `devices.ts`, `wireless.ts`, `guest.ts`,
-`firewall.ts` (zones + DMZ + port forwarding), `parental.ts`, `wan.ts`,
+`net.ts` (board/sysinfo/wan/clients), `devices.ts` (reserve IP, block, WoL, **rename via dhcp host name**), `wireless.ts`, `guest.ts`,
+`firewall.ts` (zones + DMZ + port forwarding + **generic traffic-rule CRUD** `loadRules/addRule/saveRule/deleteRule`, excludes `Block:`/`Parental:` rules owned by other screens; supports src zone/dest zone/proto/dest-port/target + optional src MAC/IP/port), `parental.ts`, `wan.ts`,
 `lan.ts`, `ipv6.ts`, `system.ts` (hostname/tz/password/reboot/scheduled reboot),
-`protection.ts` (adblock/banIP), `vpn.ts` (WireGuard + OpenVPN), `repeater.ts`
+`protection.ts` (adblock/banIP + **AdGuard Home detect-and-link-out** — AGH runs its own daemon/UI so it's shown as an "Open" link to `:3000`, not a UCI toggle), `vpn.ts` (WireGuard + OpenVPN), `repeater.ts`
 (iwinfo scan + join as sta), `tailscale.ts` (status/up/down via `tailscale` CLI
 over file.exec), `software.ts` (lists installed pkgs via apk/opkg over file.exec;
+tries `apk list --installed` then `apk list -I` then `opkg list-installed`;
 install/remove path needs the unshipped `untangled.sw` helper), `ddns.ts`,
-`qos.ts` (sqm), `upnp.ts` (miniupnpd-nftables), `firmware.ts` (sysupgrade via
-cgi-io), `dualwan.ts` (mwan3 generator), `usb.ts` (mounts + ksmbd + minidlna),
+`qos.ts` (sqm/cake — rates are MEASURED line speed set a bit below a speed-test
+result, ~90–95% down / ~85–90% up, NOT the advertised plan, or cake polices the
+wrong queue; UI labels say "Measured …" — don't revert them), `upnp.ts` (miniupnpd-nftables), `firmware.ts` (sysupgrade via
+cgi-io + **config backup/restore**: `downloadBackup` = `sysupgrade -b`→cgi-download, `restoreBackup` = cgi-upload→`sysupgrade -r`→reboot),
+`dualwan.ts` (mwan3 generator), `usb.ts` (mounts + SMB via **ksmbd OR samba4** (`loadSmbFrom` probes `ksmbd` then `samba`) + minidlna),
 `history.ts` (vnstat + nlbwmon usage history).
 
 ### Screens (`src/screens/`)
@@ -175,6 +179,7 @@ device-side orchestration), not pure core.
 - **Frontend** = a plugin shipped in core (`public/plugins/mesh/mesh.js`), degrades to "install untangled-mesh" card when the `untangled.mesh` ubus object is absent.
 - **Backend** = package `untangled-mesh` with jshn rpcd helper `openwrt/files-mesh/usr/libexec/rpcd/untangled.mesh`.
 - Helper methods: `info/status/nodes` (read-only), `set_roaming` (adds/removes 802.11r/k/v + wifi reload), `set_role`/`join`/`leave` (phase 2, safe — persist role, match SSID/key, no bridging/DHCP changes so no lockout), `apply` (no-op stub).
+- **Roaming default decision (2026-11-04):** 802.11**k/v are the safe default**; 802.11**r (FT) is opt-in** — FT can validate clean in config yet break roaming on specific driver+client combos. Known divergence held on purpose: `set_roaming`/`set_role controller` currently flip `ieee80211r='1'` *with* k/v. Leave as-is (don't force-on, don't rip out) until ≥2 boards are in `docs/HARDWARE_MATRIX.md`. Already conservative: `ft_over_ds='0'` + `ft_psk_generate_local='1'`, SSID/key untouched (no lockout).
 - "EasyMesh-like": unified SSID + dawn roaming + wired-first/802.11s backhaul + QR/code onboarding. Join code format: base64 of `untangled-mesh|mesh_id|ssid|key`.
 - busybox ash constraints: helper passes `sh -n`; `local` only inside functions.
 - **Honest gaps:** both nodes must already run OpenWRT+UnTangled; NOT certified Multi-AP/prplMesh.
@@ -184,10 +189,13 @@ device-side orchestration), not pure core.
 
 ## 8. Safety model
 
-- **Rollback-confirm** for connectivity-risky saves (Wireless, WAN, LAN, Firewall zones, DMZ): apply with a rollback timer (`uciApplyRollback`) → "Keep changes? reverting in Ns" dialog (`ConfirmApply.svelte`). Keep → `uciConfirm`; Revert/timeout → `uciRollback` + reload.
+- **Rollback-confirm is the locked keeper feature** (owner would keep it over
+  everything else — the Junos `commit confirmed` / IOS-XE revert-timer muscle
+  memory). For connectivity-risky saves (Wireless, WAN, LAN, Firewall zones, DMZ): apply with a rollback timer (`uciApplyRollback`) → "Keep changes? reverting in Ns" dialog (`ConfirmApply.svelte`). Keep → `uciConfirm`; Revert/timeout → `uciRollback` + reload.
 - **Timer invariant:** `uciApplyRollback` default is **120s** (router), `startRollbackConfirm` default is **90s** (UI) — the UI countdown must stay strictly inside the router window so a last-second "Keep" lands before auto-revert.
 - **confirm.ts is single-flight:** a new `startRollbackConfirm` finalizes any in-flight one first; keep/revert callbacks are captured synchronously before the `await`.
 - Safe screens (Guest, PortForwarding, Parental, Protection, VPN peers, device block/reserve, ipv6, dualwan, repeater) use plain `uciApply` — these can't cut the admin's own management session, so a rollback timer (which would auto-revert a successful change) would be wrong.
+- **Firewall writes must reload fw4:** every firewall-config write (device block, parental rules, firewall zones/DMZ/port-forward/traffic-rule) goes through `firewallApply()` (in `ubus.ts`), which runs `uci apply` then `/etc/init.d/firewall reload`. A bare `uci apply` does not reliably rebuild the nftables ruleset for added/removed rules — that was the cause of "block/parental didn't actually block" (u/venkatx5). Zones/DMZ still pass `rollback=true` to keep the lockout timer.
 - Known caveat: an intentional LAN-IP change can't be confirmed from the old IP (router auto-reverts) — same as LuCI.
 - Deliberate no-op stubs where half-built state could break a live router (mesh `set_role`/`join`/`leave`/`apply` were stubs before phase 2; `apply` still is).
 - **Band detection** (`net.ts`): a client is "Wired" only when the wireless subsystem actually answered and the MAC wasn't in any `iwinfo assoclist`; if wireless is unreadable it shows **Unknown**, never a false "Wired". Supports 2.4/5/6 GHz.
@@ -262,16 +270,29 @@ cron-day validation, IP octet validation, WAN dns-clear, repeater STA dedupe,
 dualwan clean rewrite, confirm single-flight) and honesty-copy for Extend
 Wi-Fi + VPN empty/success states.
 
+**Field-report fixes (from u/venkatx5, code on `main`, NOT yet tagged):** seven
+install-feedback items.
+- **Firewall reload** — block-internet + parental did nothing because fw4 was never reloaded after the UCI write; fixed with `firewallApply()` (see §8). *The core fix behind two separate complaints.*
+- **Samba4 storage** — `usb.ts` only probed `ksmbd`; now `loadSmbFrom` probes `ksmbd` then `samba` (samba4).
+- **Device rename** — new `renameDevice()` + inline ✎ edit in Devices (writes dhcp host `name`, creating a host entry if none).
+- **AdGuard Home** — now detected via `adguardhome` uci config; shown as an "Open ›" link to its own dashboard (`:3000`) rather than a fake toggle (AGH isn't UCI-controlled).
+- **Firewall traffic rules** — real add/edit/enable/delete on the Firewall screen (`config rule`), with optional source MAC/IP/port. **This reverses the "hard-defer raw firewall rules" line in the Audience decision below** — kept it plain-language (name, from→to zone, proto, port, action) rather than full nftables.
+- **Config backup/restore** — Firmware screen now has Download backup (`sysupgrade -b`) + Restore (upload→`sysupgrade -r`→reboot). **This closes the "reconcile Administration backup-restore divergence" backlog item** (built on Firmware, not Administration, since the complaint was filed against Firmware).
+- **Software message** — the dead-end "install untangled-full" text was self-contradictory for a user who already had it; now names the real cause (package manager/ACL) and tries both apk flag forms.
+- Verified by `svelte-check` + `vite build` only; **not yet run on a real router** — backup/restore, AGH `:3000`, and the fw4 reload specifically need on-device confirmation.
+
 **Deferred backlog:** VPN *create* flow (keygen/PKI); mesh phase 3 (multi-node
 discovery, 802.11s backhaul, dumb-AP bridging); Extend Wi-Fi LAN sharing
 (relayd); Software `untangled.sw` helper (or remove the dead write path/ACL
-grants); reconcile Administration divergence (prototype has backup-restore/
-config-profiles/undo; real app doesn't).
+grants). *(Done 2026-11-05: Administration backup-restore divergence — now built on the Firmware screen.)*
 
 **Audience decision (locked):** **non-tech-first**. Hard-defer power-user
-foot-guns: VLAN/switch (DSA port) editing, raw firewall traffic rules/custom
-nftables, startup/init + raw cron editors, full LuCI parity. Lean into the
-differentiators (Network Map, task flows, per-field help, rollback safety).
+foot-guns: VLAN/switch (DSA port) editing, raw custom nftables, startup/init +
+raw cron editors, full LuCI parity. Lean into the differentiators (Network Map,
+task flows, per-field help, rollback safety). *(Amended 2026-11-05: basic
+firewall **traffic rules** are now shipped (plain-language zone/proto/port/action
++ optional source match) after a field request — this is NOT raw nftables; the
+raw-nftables defer still stands.)*
 
 **Upstream (openwrt/packages):** a DRAFT Makefile+README live in
 `openwrt/upstream/` — fetches a pinned release *product* tarball (prebuilt
@@ -289,6 +310,7 @@ UPnP/NAT-PMP + static port forwarding).
 
 - `docs/HANDOFF.md` — running narrative + current open task (read first for "what now").
 - `docs/ARCHITECTURE.md` — the build plan.
+- `docs/HARDWARE_MATRIX.md` — board × radio/driver × release × roaming-feature (k/v/r) + mesh test results; where field reports get recorded. Everything starts ❔ untested.
 - `docs/PLUGINS.md` — plugin authoring.
 - `keys/README.md` — signing key generation + repo-secret + Pages setup.
 - `openwrt/README.md`, `feed/untangled/Makefile` — packaging.

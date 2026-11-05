@@ -38,7 +38,13 @@
     {#each features as f}
       <div class="gcard" class:off={!f.enabled || !f.installed}>
         <div class="gc-top"><b>{f.label}</b>
-          {#if f.installed}
+          {#if f.link}
+            {#if f.installed}
+              <a class="btn sm" href={f.link} target="_blank" rel="noopener">Open ›</a>
+            {:else}
+              <span class="statechip st-sched">not installed</span>
+            {/if}
+          {:else if f.installed}
             <label class="toggle"><input type="checkbox" checked={f.enabled} on:change={(e) => toggle(f, e.currentTarget.checked)} disabled={busy} /><span class="track"></span><span class="knob"></span></label>
           {:else}
             <span class="statechip st-sched">not installed</span>
