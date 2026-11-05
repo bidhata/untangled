@@ -1,0 +1,88 @@
+# UnTangled — Hardware & Roaming Support Matrix
+
+A place to record what has actually been **tested on real hardware**, so field
+reporters don't each burn a weekend rediscovering the same driver/client
+breakage. UnTangled's config can look perfectly valid and still break roaming on
+a specific radio-driver + client combo — especially **802.11r (Fast
+Transition)**. If it isn't in a table below with a result, treat it as
+**untested**, not "works".
+
+Status legend:
+- ✅ **OK** — tested on hardware, works as expected.
+- ⚠️ **Partial** — works with caveats (see notes).
+- ❌ **Broken** — known to fail; see the Known-broken section.
+- ❔ **Untested** — no hardware report yet (the default for everything).
+
+> Scope note (from the codebase): UnTangled targets OpenWRT **23.05** (stable,
+> ipk) and **24.10 / latest** (+ snapshot apk). Mesh is **not** certified
+> Multi-AP / prplMesh — it's "EasyMesh-like" (unified SSID + `dawn` roaming +
+> wired-first / 802.11s backhaul). Nothing below has been validated on physical
+> routers yet; every row starts ❔ until someone files a result.
+
+---
+
+## 1. Roaming features (802.11k/v/r) per radio driver
+
+The feature we're most nervous about is **802.11r (FT)**. 802.11k (neighbor
+reports) and 802.11v (BSS transition) give most of the roaming benefit with far
+less client/driver breakage, so the honest recommendation is **k+v on, r
+opt-in**.
+
+| Board / SoC | Radio | Driver | OpenWRT release | 802.11k | 802.11v | 802.11r (FT) | Notes |
+|---|---|---|---|---|---|---|---|
+| _example: TP-Link EAP615_ | 5 GHz | `ath11k` | 24.10 | ❔ | ❔ | ❔ | |
+| | 2.4 GHz | `ath9k` | 23.05 | ❔ | ❔ | ❔ | |
+| | 5 GHz | `ath10k` / `ath10k-ct` | 23.05 | ❔ | ❔ | ❔ | |
+| | 2.4/5 GHz | `mt76` | 24.10 | ❔ | ❔ | ❔ | |
+| | 6 GHz | `ath11k` | 24.10 | ❔ | ❔ | ❔ | |
+
+Driver families to cover (named in the codebase memory): `ath9k`, `ath10k` /
+`ath10k-ct`, `ath11k`, `mt76`. These behave differently for FT — test each
+separately rather than assuming one result carries over.
+
+Fill one row per (board, radio/driver, release). FT especially is
+**per-driver + per-client** — note the client side in the Notes column when a
+combo fails (e.g. "iPhone 15 fine, Intel AX210 drops on FT").
+
+---
+
+## 2. Mesh (unified SSID + dawn roaming)
+
+`untangled-mesh` ships the `untangled.mesh` rpcd helper. Phase-1 reality: single
+router reports itself; multi-node discovery (umdns), 802.11s backhaul
+(+`wpad-mesh`), and the dumb-AP bridging/DHCP-disable step are **deferred and
+need ≥2 routers to validate**.
+
+| Board / SoC | Driver | OpenWRT release | Backhaul | dawn roaming | Multi-node discovery | 802.11s | Notes |
+|---|---|---|---|---|---|---|---|
+| _example_ | `mt76` | 24.10 | wired | ❔ | ❔ | ❔ | needs 2 nodes |
+
+Backhaul values: `wired` (default, safest) / `802.11s` (needs `wpad-mesh`).
+
+---
+
+## 3. Known-broken combos
+
+Record confirmed failures here so they're greppable. One line each:
+
+- _(none reported yet)_
+
+<!-- Template:
+- ❌ FT (802.11r) — <board> / <driver> <release>, client <device>: <symptom>.
+  Workaround: <e.g. disable FT, k+v only>. Tracked: <issue link>.
+-->
+
+---
+
+## 4. How to file a result
+
+Test over `ROUTER=<ip> npm run dev` (live ubus — a bare container has no radios,
+so container tests don't count for this matrix). For each board:
+
+1. Note board/SoC, radio + **driver** (`iw dev` / `logread | grep -i <driver>`),
+   and `cat /etc/openwrt_release`.
+2. Enable the feature in UnTangled (Wireless roaming, or the Mesh plugin).
+3. Roam a client between APs (or across a weak-signal boundary) and watch for
+   drops / re-auth storms. Note the **client** device too.
+4. Add a row above with ✅/⚠️/❌ and a one-line note. For ❌, add a Known-broken
+   entry with the symptom and any workaround.

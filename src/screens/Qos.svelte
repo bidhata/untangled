@@ -48,10 +48,11 @@
       <div class="ctl"><label class="toggle"><input type="checkbox" bind:checked={state.queue.enabled} /><span class="track"></span><span class="knob"></span></label></div></div>
 
     {#if state.queue.enabled}
-      <div class="form-row"><div class="lbl">Download speed<Help text="Your plan's download speed in Mbps. Set it to about 90–95% of your measured speed for best results." /></div>
+      <div class="form-row"><div class="lbl">Measured download speed<Help text="Your real, tested download speed in Mbps — from a speed test, NOT your plan's advertised number. Set it to about 90–95% of the tested result." /></div>
         <div class="ctl"><input type="number" min="0" bind:value={state.queue.downMbps} style="min-width:120px" /><span class="hint">Mbps</span></div></div>
-      <div class="form-row"><div class="lbl">Upload speed<Help text="Your plan's upload speed in Mbps (about 90–95% of measured). Correct upload is the biggest factor for call/gaming lag." /></div>
+      <div class="form-row"><div class="lbl">Measured upload speed<Help text="Your real, tested upload speed in Mbps — from a speed test, NOT your plan's number. Set it to about 85–90% of the tested result. Correct upload is the biggest factor for call/gaming lag." /></div>
         <div class="ctl"><input type="number" min="0" bind:value={state.queue.upMbps} style="min-width:120px" /><span class="hint">Mbps</span></div></div>
+      <p class="hint" style="margin:-4px 0 10px">Use speeds from a real speed test, not the plan you pay for. Set them a bit below your tested result so Smart Queue stays in control of the queue.</p>
       <div class="form-row"><div class="lbl">Mode<Help text="Simple shares the link fairly between devices. Prioritised also gives interactive traffic (calls, games, DNS) a head start." /></div>
         <div class="ctl"><select bind:value={state.queue.script}>
           <option value="piece_of_cake.qos">Simple (fair sharing)</option>
