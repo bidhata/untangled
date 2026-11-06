@@ -52,6 +52,7 @@ code{font-family:var(--font-mono);font-size:.92em}
 .top-spacer{flex:1}
 .pill{display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 13px;border:1px solid var(--line);border-radius:999px;font-size:12px;color:var(--ink-dim);background:var(--panel)}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--good);box-shadow:0 0 8px var(--good)}
+.dot.down{background:var(--crit);box-shadow:0 0 8px var(--crit)}
 .tbtn{display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 13px;border:1px solid var(--line);background:var(--panel);color:var(--ink-dim);border-radius:10px;font-size:12.5px;cursor:pointer;transition:.15s}
 .tbtn:hover{border-color:var(--accent);color:var(--ink)}
 .tbtn svg{width:15px;height:15px}
@@ -120,16 +121,77 @@ input:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 
 .cmd-foot{display:flex;gap:16px;padding:10px 17px;border-top:1px solid var(--line-soft);font-size:11px;color:var(--muted)}
 .cmd-foot b{font-family:var(--font-mono);background:var(--panel-2);border:1px solid var(--line);border-radius:5px;padding:1px 5px;font-weight:600}
 
-/* ---- Login ---- */
-.login-wrap{min-height:100%;display:grid;place-items:center;padding:24px}
-.login-card{width:min(380px,92vw);background:var(--panel);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);padding:30px}
-.login-card .logo{width:44px;height:44px;margin:0 auto 14px}
-.login-card h1{margin:0 0 4px;font-size:20px;text-align:center}
-.login-card p{margin:0 0 22px;text-align:center;color:var(--muted);font-size:13px}
-.login-card label{display:block;font-size:12px;color:var(--ink-dim);font-weight:600;margin:0 0 6px}
-.login-card input{width:100%;margin-bottom:14px}
-.login-card .btn{width:100%;justify-content:center}
-.login-err{background:rgba(240,68,56,.12);color:var(--crit);border:1px solid rgba(240,68,56,.3);border-radius:10px;padding:10px 12px;font-size:12.5px;margin-bottom:14px}
+/* ---- Login / auth ---- */
+.auth{min-height:100%;display:grid;grid-template-columns:1.05fr .95fr}
+@media (max-width:860px){.auth{grid-template-columns:1fr}}
+
+/* Brand / value panel */
+.auth-hero{position:relative;overflow:hidden;display:flex;align-items:center;
+  padding:48px 56px;color:#eafcff;
+  background:linear-gradient(150deg,var(--accent-deep),#063f49 85%)}
+:root[data-theme="dark"] .auth-hero{background:linear-gradient(150deg,#0b5560,#04232a 90%)}
+@media (max-width:860px){.auth-hero{display:none}}
+.auth-hero-glow{position:absolute;inset:0;pointer-events:none;
+  background:
+    radial-gradient(640px 420px at 18% 8%, rgba(69,226,239,.38), transparent 60%),
+    radial-gradient(560px 460px at 92% 96%, rgba(10,140,153,.45), transparent 60%)}
+.auth-hero-body{position:relative;max-width:420px}
+.auth-brand{display:flex;align-items:center;gap:12px;margin-bottom:40px}
+.auth-brand .logo{width:40px;height:40px;box-shadow:0 6px 18px -6px rgba(0,0,0,.5)}
+.auth-brand-txt b{display:block;font-size:19px;line-height:1.05;letter-spacing:.2px}
+.auth-brand-txt small{display:block;font-size:10px;letter-spacing:1.8px;text-transform:uppercase;color:rgba(234,252,255,.7)}
+.auth-hero h2{margin:0 0 14px;font-size:34px;line-height:1.1;font-weight:700;letter-spacing:-.4px}
+.auth-hero > .auth-hero-body > p{margin:0 0 30px;font-size:15px;line-height:1.6;color:rgba(234,252,255,.82);max-width:36ch}
+.auth-points{list-style:none;margin:0;padding:0;display:grid;gap:14px}
+.auth-points li{display:flex;align-items:center;gap:12px;font-size:13.5px;color:rgba(234,252,255,.92)}
+.auth-points li svg{flex:0 0 auto;color:#8ef0fb}
+
+/* Form side */
+.auth-main{position:relative;display:grid;place-items:center;padding:32px 24px;
+  background:radial-gradient(900px 540px at 50% -10%, var(--accent-soft), transparent 60%), var(--bg)}
+.auth-theme{position:absolute;top:18px;right:18px;width:38px;height:38px;display:grid;place-items:center;
+  border:1px solid var(--line);background:var(--panel);color:var(--ink-dim);border-radius:11px;cursor:pointer;transition:.15s}
+.auth-theme:hover{border-color:var(--accent);color:var(--ink)}
+.auth-theme svg{width:17px;height:17px}
+
+.auth-card{width:min(400px,94vw);background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--radius);box-shadow:var(--shadow);padding:34px 34px 26px;
+  animation:auth-in .45s cubic-bezier(.2,.7,.2,1) both}
+.auth-card-head{text-align:center;margin-bottom:22px}
+.auth-card-head .logo-lg{width:52px;height:52px;margin:0 auto 16px;border-radius:14px}
+.auth-card-head .logo-lg svg{width:26px;height:26px}
+.auth-card h1{margin:0 0 5px;font-size:22px;letter-spacing:-.2px}
+.auth-card-head p{margin:0;color:var(--muted);font-size:13px}
+
+.auth-card label{display:block;font-size:12px;color:var(--ink-dim);font-weight:600;margin:0 0 7px}
+
+/* input with leading icon + optional trailing button */
+.field{position:relative;display:flex;align-items:center;margin-bottom:16px}
+.field > svg{position:absolute;left:12px;width:17px;height:17px;color:var(--muted);pointer-events:none}
+.field input{width:100%;padding-left:38px}
+.field input[type=password],.field input#p{padding-right:42px}
+.field-btn{position:absolute;right:4px;width:34px;height:34px;display:grid;place-items:center;
+  border:none;background:none;color:var(--muted);border-radius:8px;cursor:pointer;transition:.15s}
+.field-btn:hover{color:var(--ink)}
+.field-btn svg{width:17px;height:17px}
+
+.auth-submit{width:100%;justify-content:center;margin-top:4px;height:42px}
+.auth-foot{text-align:center;margin:14px 0 0;font-size:12px;color:var(--muted)}
+.auth-foot kbd{font-family:var(--font-mono);font-size:11px;background:var(--panel-2);
+  border:1px solid var(--line);border-radius:5px;padding:1px 6px;color:var(--ink-dim)}
+
+.login-err{background:rgba(240,68,56,.12);color:var(--crit);border:1px solid rgba(240,68,56,.3);
+  border-radius:10px;padding:10px 12px;font-size:12.5px;margin-bottom:16px;text-align:center}
+
+.spin{width:15px;height:15px;border-radius:50%;border:2px solid rgba(255,255,255,.4);
+  border-top-color:#fff;display:inline-block;animation:spin .7s linear infinite;vertical-align:-2px}
+
+@keyframes auth-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){
+  .auth-card{animation:none}
+  .spin{animation-duration:1.2s}
+}
 
 /* ---- Dashboard: tiles, topology, clients ---- */
 .hint{font-size:11.5px;color:var(--muted)}
@@ -299,3 +361,74 @@ input:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 
   #cmdBtn .lbltxt,#cmdBtn .kbd{display:none}
 }
 @media (prefers-reduced-motion:reduce){*{animation-duration:.001ms!important;transition-duration:.001ms!important}}
+
+/* ======================================================================
+   Feel pass (Apple-inspired, CSS-only, token-driven, no new deps).
+   Self-contained: delete this block to fully revert.
+   - Press feedback on pointer-down (response/directness)
+   - Translucent chrome with blur (material/depth)
+   - Scroll-edge fade under the topbar (soft divider, not a hard line)
+   - Size-specific heading tracking (typography craft)
+   - reduced-motion / reduced-transparency / high-contrast fallbacks
+   ====================================================================== */
+
+/* 1. Press feedback — instant, on :active (pointer-down), not on release. */
+.btn:active,
+.tbtn:active,
+.icbtn:active,
+.nav-item:active,
+.auth-theme:active,
+.field-btn:active{transform:scale(.97)}
+.btn,.tbtn,.icbtn,.nav-item,.auth-theme,.field-btn{transition:transform .1s ease-out,background .14s,border-color .15s,color .15s,filter .15s}
+.pill{transition:none} /* status pill isn't a control — don't animate it */
+
+/* Device/client rows feel tappable too (NetworkMap + Devices tables). */
+.clients tr{transition:background .14s,transform .1s ease-out}
+.clients tr:active{transform:scale(.995)}
+
+/* 2. Translucent chrome — chrome reads as a floating material over the
+   accent-gradient body. Falls back to solid where unsupported. */
+@supports (backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px)){
+  .topbar,.brandbar{
+    background:color-mix(in srgb, var(--topbar) 72%, transparent);
+    -webkit-backdrop-filter:blur(18px) saturate(160%);
+    backdrop-filter:blur(18px) saturate(160%);
+  }
+  .sidebar{
+    background:color-mix(in srgb, var(--rail) 78%, transparent);
+    -webkit-backdrop-filter:blur(18px) saturate(160%);
+    backdrop-filter:blur(18px) saturate(160%);
+  }
+}
+
+/* 3. Scroll-edge fade — a short mask where scrolling content meets the
+   topbar, instead of relying only on the 1px border. */
+.main::before{
+  content:"";position:sticky;top:0;display:block;height:14px;margin:-24px -28px 10px;
+  background:linear-gradient(var(--bg), transparent);
+  pointer-events:none;z-index:5;
+}
+@media (max-width:820px){
+  .main::before{margin:-16px -14px 8px} /* match the mobile .main padding */
+}
+
+/* 4. Typography — tighten large display text (negative tracking as it
+   grows); body/labels stay at their natural tracking. */
+.page-head h1{letter-spacing:-.4px}
+.tile .v{letter-spacing:-.3px}
+.auth-hero h2{letter-spacing:-.5px}
+
+/* 5. Accessibility fallbacks for the material layer.
+   (reduced-motion is already handled by the global reset above.) */
+@media (prefers-reduced-transparency:reduce){
+  .topbar,.brandbar{background:var(--topbar);-webkit-backdrop-filter:none;backdrop-filter:none}
+  .sidebar{background:var(--rail);-webkit-backdrop-filter:none;backdrop-filter:none}
+  .auth-hero-glow{display:none}
+}
+@media (prefers-contrast:more){
+  .topbar,.brandbar,.sidebar{background:var(--panel)}
+  .nav-item.active{outline:1px solid var(--accent)}
+}
+@media (prefers-reduced-motion:reduce){
+  .btn:active,.tbtn:active,.icbtn:active,.nav-item:active,.auth-theme:active,.field-btn:active,.clients tr:active{transform:none}
+}
