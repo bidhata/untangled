@@ -5,7 +5,7 @@ in `HANDOFF.md`, and the current open task is always at the **top of
 `HANDOFF.md`**.
 
 Keep this file current when structure, conventions, or key decisions change.
-Last updated: 2026-11-05 (field-report fixes from u/venkatx5: firewall reload after fw4 writes; Samba4 detection; device rename; AdGuard Home detect+link-out; firewall traffic-rule CRUD w/ source match; config backup/restore. Reverses two prior "locked"/backlog items — see §10. Not yet pushed-tag; code-only.).
+Last updated: 2026-11-06 (session: @spdixit field report on JioRouter AX6000 JIDU6101 / OpenWrt 25.12 — fixed hardcoded topbar (now live `system.board`/WAN + build-injected version); redesigned Login (branded split layout, Enter-to-submit, show/hide, theme toggle); CSS-only "feel pass" (press feedback, translucent chrome, scroll-edge fade, type tracking, a11y fallbacks); new IPv6 **announced DNS servers** field (server mode). Also doc fixes: apk/ipk = 23.05+24.10 ipk / snapshot apk. First physical-hardware row in HARDWARE_MATRIX. Code-only, not yet tagged.).
 
 ---
 
@@ -97,7 +97,7 @@ Per-feature data libs (each paired with a screen; most degrade to an
 "install &lt;pkg&gt;" card when the underlying package/uci config is absent):
 `net.ts` (board/sysinfo/wan/clients), `devices.ts` (reserve IP, block, WoL, **rename via dhcp host name**), `wireless.ts`, `guest.ts`,
 `firewall.ts` (zones + DMZ + port forwarding + **generic traffic-rule CRUD** `loadRules/addRule/saveRule/deleteRule`, excludes `Block:`/`Parental:` rules owned by other screens; supports src zone/dest zone/proto/dest-port/target + optional src MAC/IP/port), `parental.ts`, `wan.ts`,
-`lan.ts`, `ipv6.ts`, `system.ts` (hostname/tz/password/reboot/scheduled reboot),
+`lan.ts`, `ipv6.ts` (wan6 enable + LAN mode server/relay/off + **announced IPv6 DNS servers** in server mode via `dhcp.lan` `dns` list; empty = router announces itself; clears the option rather than writing an empty list), `system.ts` (hostname/tz/password/reboot/scheduled reboot),
 `protection.ts` (adblock/banIP + **AdGuard Home detect-and-link-out** — AGH runs its own daemon/UI so it's shown as an "Open" link to `:3000`, not a UCI toggle), `vpn.ts` (WireGuard + OpenVPN), `repeater.ts`
 (iwinfo scan + join as sta), `tailscale.ts` (status/up/down via `tailscale` CLI
 over file.exec), `software.ts` (lists installed pkgs via apk/opkg over file.exec;
@@ -280,6 +280,14 @@ install-feedback items.
 - **Config backup/restore** — Firmware screen now has Download backup (`sysupgrade -b`) + Restore (upload→`sysupgrade -r`→reboot). **This closes the "reconcile Administration backup-restore divergence" backlog item** (built on Firmware, not Administration, since the complaint was filed against Firmware).
 - **Software message** — the dead-end "install untangled-full" text was self-contradictory for a user who already had it; now names the real cause (package manager/ACL) and tries both apk flag forms.
 - Verified by `svelte-check` + `vite build` only; **not yet run on a real router** — backup/restore, AGH `:3000`, and the fw4 reload specifically need on-device confirmation.
+
+**Field-report + polish (from @spdixit, JioRouter AX6000 JIDU6101 on OpenWrt 25.12, code on `main`, NOT yet tagged):** first real physical-hardware report.
+- **Topbar was hardcoded** — showed `RT-AX88U` / `OpenWRT 24.10` / `UnTangled 0.1` / "Internet online" as literals while the Network Map panel showed the real device. Now `Topbar.svelte` reads live `getBoard()` (model+firmware) + `getWan()` (WAN pill, 5s poll, red when down) and the version comes from a build-time `__APP_VERSION__` (Vite `define` ← `package.json`; `Sidebar.svelte` uses the same). Topbar was the *only* place with faked per-router values — audited the other 26 screens, all already live.
+- **Login redesign** — branded two-column auth (teal hero panel + card), icon-adorned fields, show/hide password, loading state, theme toggle, Enter-to-submit on both fields (the literal ask: sign in without the mouse), "leave empty if no password" hint. Added `i-eye`/`i-eye-off`/`i-user`/`i-lock` to the sprite.
+- **CSS-only "feel pass"** (self-contained block at end of `app.css`, delete to revert): `:active` press-scale on controls, translucent `backdrop-filter` chrome (topbar/brandbar/sidebar) wrapped in `@supports`, scroll-edge fade under the topbar, negative tracking on large headings, and `prefers-reduced-transparency`/`prefers-contrast` fallbacks (reduced-motion already globally reset). +0.36 KB gz CSS, no new deps, offline promise intact. Did **not** reskin the 27 screens or add a spring library.
+- **IPv6 announced DNS servers** — new field on the IPv6 screen (server mode only): add/remove IPv6 DNS addresses announced via RA+DHCPv6 (`dhcp.lan` `dns` list). Caught a bug mid-review: clearing must `uciDelete` the option, not write `[]` (empty list leaves a bogus element — same pattern as `wan.ts`).
+- **Doc corrections** — `openwrt/README.md` + `release.yml` header wrongly said "24.10+ = apk"; corrected to 23.05+24.10 = ipk, snapshot = apk (matches the workflow matrix + `keys/README.md`). Added §0 device-support + a 2-row roaming entry (both radios `mt76`/`mt798x-wmac`) to `HARDWARE_MATRIX.md`; README now mentions OpenWrt 25.x. `docs/image.webp` (reporter screenshot, shows real network) is gitignored, not committed.
+- Verified by `svelte-check` + `vite build` only; **not yet run on a real router** — the IPv6 DNS announce (odhcpd), topbar live reads, and passwordless login all need on-device confirmation.
 
 **Deferred backlog:** VPN *create* flow (keygen/PKI); mesh phase 3 (multi-node
 discovery, 802.11s backhaul, dumb-AP bridging); Extend Wi-Fi LAN sharing
