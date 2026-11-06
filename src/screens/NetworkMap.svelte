@@ -4,7 +4,7 @@
   import {
     getBoard, getSysInfo, getWan, getClients, formatUptime,
     bandName, bandStroke, bandClass,
-    type BoardInfo, type SysInfo, type WanStatus, type Client
+    type BoardInfo, type SysInfo, type WanStatus, type Client, type Band
   } from '../lib/net';
 
   let loading = true;
@@ -14,6 +14,8 @@
   let wan: WanStatus | null = null;
   let clients: Client[] = [];
   let selected: string = 'router'; // 'router' | 'internet' | client id
+  let expandedBand: Band | null = null; // which band hub is expanded on the map
+  let query = ''; // table search filter
   let timer: ReturnType<typeof setInterval> | undefined;
 
   async function loadAll() {
@@ -41,15 +43,58 @@
   onDestroy(() => clearInterval(timer));
 
   // ---- topology geometry ----
-  const VW = 800, RX = 400, RY = 205, Y = 358, SPREAD = 720;
-  $: shown = clients.slice(0, 12);
-  function nodeX(i: number, n: number) {
-    return n <= 1 ? RX : RX - SPREAD / 2 + (SPREAD / (n - 1)) * i;
+  // The map groups devices by band into "hubs" so it stays readable no matter
+  // how many clients there are. A hub can be expanded to reveal its devices.
+  const VW = 800, RX = 400, Y = 360;
+  const BAND_ORDER: Band[] = ['5', '24', '6', 'wired', '?'];
+  const HUB_SPREAD = 660, DEV_SPREAD = 720, DEV_PER_ROW = 8, ROW_GAP = 92;
+
+  // Build the list of non-empty band groups, in a stable display order.
+  $: groups = BAND_ORDER
+    .map((band) => ({ band, items: clients.filter((c) => c.band === band) }))
+    .filter((g) => g.items.length > 0);
+
+  // Devices revealed under the currently expanded hub.
+  $: expandedItems = expandedBand ? clients.filter((c) => c.band === expandedBand) : [];
+  $: expandedRows = Math.ceil(expandedItems.length / DEV_PER_ROW) || 0;
+  // Taller canvas only when a hub is expanded and spills onto extra rows.
+  $: svgH = 470 + (expandedBand ? 70 + Math.max(0, expandedRows - 1) * ROW_GAP : 0);
+
+  function spreadX(i: number, n: number, spread: number) {
+    return n <= 1 ? RX : RX - spread / 2 + (spread / (n - 1)) * i;
   }
+  function hubX(i: number, n: number) {
+    return spreadX(i, n, HUB_SPREAD);
+  }
+  function devX(i: number) {
+    const col = i % DEV_PER_ROW;
+    const row = Math.floor(i / DEV_PER_ROW);
+    const len = Math.min(DEV_PER_ROW, expandedItems.length - row * DEV_PER_ROW);
+    return spreadX(col, len, DEV_SPREAD);
+  }
+  function devY(i: number) {
+    return Y + 150 + Math.floor(i / DEV_PER_ROW) * ROW_GAP;
+  }
+  function toggleBand(b: Band) {
+    expandedBand = expandedBand === b ? null : b;
+  }
+
   function bars(sig: number) {
     return [1, 2, 3, 4].map((n) => n <= sig);
   }
   const selectedClient = () => clients.find((c) => c.id === selected) || null;
+
+  // ---- table search ----
+  $: filtered = query.trim()
+    ? clients.filter((c) => {
+        const q = query.toLowerCase();
+        return (
+          c.name.toLowerCase().includes(q) ||
+          c.ip.toLowerCase().includes(q) ||
+          c.mac.toLowerCase().includes(q)
+        );
+      })
+    : clients;
 </script>
 
 <div class="page-head">
@@ -97,12 +142,18 @@
     <div class="panel">
       <div class="panel-h"><h2>Topology</h2><span class="sub">{wan?.device || 'wan'}</span></div>
       <div class="mapwrap">
-        <svg class="topo" viewBox="0 0 {VW} 430" role="img" aria-label="Network topology">
-          <!-- links -->
+        <svg class="topo" viewBox="0 0 {VW} {svgH}" role="img" aria-label="Network topology">
+          <!-- internet → router link -->
           <line class="link ilink" x1="400" y1="82" x2="400" y2="165" stroke-width="2.5" />
-          {#each shown as c, i}
-            <path class="link" d={`M400,245 C400,320 ${nodeX(i, shown.length)},285 ${nodeX(i, shown.length)},${Y - 30}`} stroke={bandStroke[c.band]} stroke-width="2.5" />
+          <!-- router → band hub links -->
+          {#each groups as g, i}
+            <path class="link" d={`M400,245 C400,300 ${hubX(i, groups.length)},300 ${hubX(i, groups.length)},${Y - 34}`} stroke={bandStroke[g.band]} stroke-width="2.5" />
           {/each}
+          <!-- expanded hub → device links -->
+          {#each expandedItems as c, i}
+            <path class="link" d={`M${hubX(groups.findIndex((g) => g.band === expandedBand), groups.length)},${Y + 34} C${hubX(groups.findIndex((g) => g.band === expandedBand), groups.length)},${Y + 110} ${devX(i)},${devY(i) - 70} ${devX(i)},${devY(i) - 26}`} stroke={bandStroke[c.band]} stroke-width="2" opacity="0.8" />
+          {/each}
+
           <!-- internet -->
           <g class="node" class:sel={selected === 'internet'} role="button" tabindex="0"
              on:click={() => (selected = 'internet')} on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selected = 'internet'; } }}>
@@ -117,13 +168,24 @@
             <use class="router-ic" href="#d-router" x="378" y="183" width="44" height="44" />
             <text x="400" y="268" text-anchor="middle" font-size="12.5" font-weight="700">{board?.model ?? 'Router'}</text>
           </g>
-          <!-- clients -->
-          {#each shown as c, i}
+          <!-- band hubs -->
+          {#each groups as g, i}
+            <g class="node" class:sel={expandedBand === g.band} role="button" tabindex="0"
+               aria-label={`${bandName[g.band]} — ${g.items.length} devices`} aria-pressed={expandedBand === g.band}
+               on:click={() => toggleBand(g.band)}
+               on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleBand(g.band); } }}>
+              <circle class="nbg hub" cx={hubX(i, groups.length)} cy={Y} r="30" style="--band:{bandStroke[g.band]}" />
+              <text x={hubX(i, groups.length)} y={Y + 6} text-anchor="middle" font-size="18" font-weight="700" fill={bandStroke[g.band]}>{g.items.length}</text>
+              <text class="nlabel" x={hubX(i, groups.length)} y={Y + 50} text-anchor="middle" font-size="11">{bandName[g.band]}</text>
+            </g>
+          {/each}
+          <!-- expanded devices -->
+          {#each expandedItems as c, i}
             <g class="node" class:sel={selected === c.id} role="button" tabindex="0" aria-label={c.name}
                on:click={() => (selected = c.id)} on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selected = c.id; } }}>
-              <circle class="nbg" cx={nodeX(i, shown.length)} cy={Y} r="26" />
-              <use href={'#' + c.kind} x={nodeX(i, shown.length) - 14} y={Y - 14} width="28" height="28" color={bandStroke[c.band]} />
-              <text class="nlabel" x={nodeX(i, shown.length)} y={Y + 44} text-anchor="middle" font-size="11">{c.name.split(' ')[0]}</text>
+              <circle class="nbg" cx={devX(i)} cy={devY(i)} r="24" />
+              <use href={'#' + c.kind} x={devX(i) - 13} y={devY(i) - 13} width="26" height="26" color={bandStroke[c.band]} />
+              <text class="nlabel" x={devX(i)} y={devY(i) + 40} text-anchor="middle" font-size="10.5">{c.name.split(' ')[0]}</text>
             </g>
           {/each}
         </svg>
@@ -131,7 +193,7 @@
           <span><i class="lg" style="background:var(--band5,#0fb5c4)"></i> 5 GHz</span>
           <span><i class="lg" style="background:#f79009"></i> 2.4 GHz</span>
           <span><i class="lg" style="background:#17b26a"></i> Wired</span>
-          {#if clients.length > shown.length}<span style="opacity:.8">+{clients.length - shown.length} more below</span>{/if}
+          <span style="opacity:.8">{expandedBand ? 'Tap a hub to collapse' : 'Tap a hub to expand'}</span>
         </div>
       </div>
     </div>
@@ -166,13 +228,22 @@
   </div>
 
   <div class="panel" style="margin-top:18px">
-    <div class="panel-h"><h2>Connected Clients</h2><span class="sub">{clients.length} devices</span></div>
+    <div class="panel-h">
+      <h2>Connected Clients</h2>
+      <input
+        class="tsearch"
+        type="search"
+        placeholder="Search name, IP, or MAC…"
+        bind:value={query}
+        aria-label="Search connected clients" />
+      <span class="sub">{filtered.length} of {clients.length} devices</span>
+    </div>
     <div style="overflow-x:auto">
       <table class="clients">
         <thead><tr><th>Device</th><th>IP Address</th><th>Connection</th><th>Signal</th></tr></thead>
         <tbody>
-          {#each clients as c}
-            <tr on:click={() => (selected = c.id)}>
+          {#each filtered as c}
+            <tr class:sel={selected === c.id} on:click={() => (selected = c.id)}>
               <td><div class="cname"><span class="mi"><Icon name={c.kind} size={17} /></span><span><b>{c.name}</b><small>{c.mac}</small></span></div></td>
               <td class="mono">{c.ip}</td>
               <td><span class="bandchip {bandClass[c.band]}">{bandName[c.band]}</span></td>
@@ -181,6 +252,8 @@
           {/each}
           {#if !clients.length}
             <tr><td colspan="4" style="color:var(--muted);padding:22px">No clients seen yet.</td></tr>
+          {:else if !filtered.length}
+            <tr><td colspan="4" style="color:var(--muted);padding:22px">No devices match “{query}”.</td></tr>
           {/if}
         </tbody>
       </table>
