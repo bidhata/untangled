@@ -98,6 +98,19 @@ Prefer a file? Every release attaches raw `.ipk` (stable) and `.apk` (snapshot) 
 
 > **No router handy?** [Click through the live demo](https://bidhata.github.io/untangled/demo/) for the full UI with sample data, in your browser.
 
+### Coming from a Jio AirFiber router?
+
+If you installed OpenWrt on a **Jio IDU (JIDU)** router — any of the AX6000 models (6101, 6201, 6401, 6601, 6701 on MediaTek, or 6111, 6411, 6611, 6811, 6911 on Qualcomm) — UnTangled installs the same way as above. A few things to know:
+
+- Your router is on **OpenWrt 25.12** (stable), so use the **opkg** commands above.
+- The default IP after flashing OpenWrt is **`192.168.1.1`** (the stock Jio address was `192.168.31.1`). Open `http://192.168.1.1/untangled/` after installing.
+- Sign in with the OpenWrt **root** account (the password you set in LuCI after flashing — this is *not* the old Jio admin password).
+- Both hardware families work: **MediaTek MT7986A** (`mt76` Wi-Fi, official OpenWrt) and **Qualcomm IPQ9574** (`ath11k`, community OpenWrt build). The UI package is architecture-independent.
+- UnTangled's **Network Map** will correctly show your model name (e.g. "JioRouter AX6000 JIDU6101") and firmware version, and all features (Wireless, Devices, QoS, VPN, etc.) work the same as on any other OpenWrt router.
+- If you're running **AdGuard Home** alongside OpenWrt (common on the "small buffers" Qualcomm build), UnTangled's Network Protection screen detects it and links to the AGH dashboard automatically.
+
+See [`docs/HARDWARE_MATRIX.md`](docs/HARDWARE_MATRIX.md) §5 for the full JIDU model reference.
+
 ## Requirements & hardware support
 
 UnTangled is an **OpenWRT** interface. It does not run on stock vendor firmware, DD-WRT, pfSense or similar.

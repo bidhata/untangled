@@ -3,7 +3,8 @@
 // Two ways to list packages:
 //   1. The planned `untangled.sw` rpcd helper (richest: available + installed).
 //   2. Fallback via file.exec running the on-device package manager
-//      (`apk list --installed` on 24.10+, or `opkg list-installed` on 23.05).
+//      (`opkg list-installed` on stable 23.05/24.10/25.x, or `apk list
+//      --installed` on snapshot — apk is snapshot-only, not a 24.10 thing).
 // The fallback needs no extra package beyond file.exec (in the core ACL), so
 // the Software screen shows what's actually installed even before the helper
 // ships. "Notable apps" (tailscale, vnstat, …) are flagged so the UI can link
@@ -94,8 +95,9 @@ function parseOpkg(out: string): Pkg[] {
 }
 
 async function listViaExec(): Promise<Pkg[] | null> {
-  // Prefer apk (24.10+); fall back to opkg (23.05 and earlier). apk's installed
-  // flag is `--installed` on some builds and `-I` on others, so try both.
+  // Try apk first (snapshot only), then fall back to opkg (stable: 23.05 / 24.10
+  // / 25.x). apk's installed flag is `--installed` on some builds and `-I` on
+  // others, so try both forms before giving up.
   for (const args of [['list', '--installed'], ['list', '-I']]) {
     const apk = await exec('apk', args);
     if (apk) {
