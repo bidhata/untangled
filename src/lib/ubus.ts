@@ -6,6 +6,10 @@
 export const UBUS_URL = '/ubus';
 const NULL_SESSION = '00000000000000000000000000000000';
 
+// Dev-only mock backend (tree-shaken from production builds). When enabled,
+// every call() is served from in-memory fixtures instead of POST /ubus.
+import { MOCK_ENABLED, mockCall } from './mockUbus';
+
 let sessionId = NULL_SESSION;
 let rpcId = 1;
 
@@ -34,6 +38,12 @@ export async function call<T = unknown>(
   method: string,
   params: Record<string, unknown> = {}
 ): Promise<T> {
+  // Dev mock: serve from fixtures, skipping the network entirely.
+  if (MOCK_ENABLED) {
+    await new Promise((r) => setTimeout(r, 120)); // mimic a little latency
+    return mockCall(object, method, params) as T;
+  }
+
   const body = {
     jsonrpc: '2.0',
     id: rpcId++,

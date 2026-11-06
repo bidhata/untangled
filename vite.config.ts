@@ -23,6 +23,15 @@ export default defineConfig({
     chunkSizeWarningLimit: 400
   },
   server: {
+    // Bind to all interfaces so the dev server is reachable from the LAN
+    // (and from the container host's published port). Override with
+    // `--host <ip>` on the CLI if you ever need to narrow it.
+    host: '0.0.0.0',
+    port: 5173,
+    strictPort: false,
+    // Accept requests regardless of the Host header — needed when reaching
+    // the server via the container host's LAN IP rather than localhost.
+    allowedHosts: true,
     proxy: {
       '/ubus': {
         target: `https://${ROUTER}`,
