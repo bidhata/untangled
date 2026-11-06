@@ -7,6 +7,8 @@
   export let open: boolean = false;
   export let onNavigate: () => void = () => {};
 
+  const version = __APP_VERSION__;
+
   $: groups = buildNav(nav, $plugins);
 
   function navigate(id: string) {
@@ -30,7 +32,7 @@
   {/each}
 
   <div class="nav-foot">
-    <div class="ver">UnTangled 0.1-beta</div>
+    <div class="ver">UnTangled {version}-beta</div>
     <div>by <a href="mailto:me@krishnendu.com">Krish Paul</a></div>
     <a class="gh" href="https://github.com/bidhata/untangled" target="_blank" rel="noopener"><svg><use href="#i-github" /></svg> GitHub</a>
   </div>
