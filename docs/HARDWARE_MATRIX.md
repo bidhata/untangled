@@ -101,3 +101,59 @@ so container tests don't count for this matrix). For each board:
    drops / re-auth storms. Note the **client** device too.
 4. Add a row above with ✅/⚠️/❌ and a one-line note. For ❌, add a Known-broken
    entry with the symptom and any workaround.
+
+---
+
+## 5. Jio JIDU model reference (JioRouter AX6000 family)
+
+All Jio IDU (Indoor Unit) routers are branded **"JioRouter AX6000"** but fall
+into **two distinct hardware families**. Source:
+[wpfyorg/idu-unlock](https://github.com/wpfyorg/idu-unlock),
+[Frozenxc/JioAF](https://github.com/Frozenxc/JioAF).
+
+### MediaTek `6j01` family — MT7986A (Filogic 830)
+
+All share: **MT7986A** (ARM Cortex-A53 dual-core), **512 MB RAM**, **256 MB
+SPI-NAND** (UBI, dual-slot boot), **5× GbE + USB**, Wi-Fi 6 AX6000.
+OpenWrt target: `mediatek/filogic`. Wi-Fi driver: **`mt76`** (`mt798x-wmac`).
+**Official OpenWrt from 25.12.6** (needs [PR 25122](https://github.com/openwrt/openwrt/pull/25122)
+SPI-NAND pinctrl fix, included in 25.12.6 images).
+
+| Model | ODM | OpenWrt device identity | Notes |
+|---|---|---|---|
+| **JIDU6101** | Arcadyan | `jidu6101` (own identity) | First field report (this matrix, §0). |
+| JIDU6201 | *(unknown)* | `jidu6j01` (shared) | Same hw as 6101, different ODM. |
+| JIDU6401 | Sercomm | `jidu6j01` (shared) | UART photo available externally. |
+| JIDU6601 | *(unknown)* | `jidu6j01` (shared) | |
+| JIDU6701 | Skyworth | `jidu6j01` (shared) | |
+
+Since all five are the same SoC/RAM/flash/radio, a result on any one should
+carry to the others — **except** the device identity in `system.board` differs
+(`jidu6101` vs `jidu6j01`), so the topbar will show the correct model per unit.
+
+### Qualcomm `6j11` family — IPQ9574
+
+| Model | ODM | Notes |
+|---|---|---|
+| JIDU6111 | *(unknown)* | |
+| JIDU6411 | *(unknown)* | |
+| JIDU6611 | Sercomm | |
+| JIDU6811 | *(unknown)* | |
+| JIDU6911 | *(unknown)* | |
+
+SoC: **Qualcomm IPQ9574** (ARM Cortex-A73, quad-core). OpenWrt target:
+`qualcommbe/ipq95xx`. Wi-Fi driver: **`ath11k`**. RAM/flash/port details not
+publicly documented but likely similar to the 6j01 family.
+
+**No official OpenWrt images** — only community builds from
+[themayankraut](https://github.com/themayankraut/JIO-AX6000-6J11-OpenWRT-SSH).
+UnTangled should work (it's arch-independent), but is completely untested on
+this family. If a reporter files a result, this is a new driver family (`ath11k`
+on IPQ95xx) worth a separate roaming-matrix row.
+
+### NOT the same: JODU (Outdoor Unit)
+
+Jio AirFiber also ships **JODU** models (JODU51641, 51642, 52041, 52140, 52240,
+52540) — outdoor 5G/LTE fixed-wireless radios running OE/Yocto Linux, **not
+OpenWrt**. UnTangled cannot target them. Don't confuse JIDU (indoor router)
+with JODU (outdoor radio).

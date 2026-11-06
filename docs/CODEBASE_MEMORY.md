@@ -5,7 +5,7 @@ in `HANDOFF.md`, and the current open task is always at the **top of
 `HANDOFF.md`**.
 
 Keep this file current when structure, conventions, or key decisions change.
-Last updated: 2026-11-06 (session: @spdixit field report on JioRouter AX6000 JIDU6101 / OpenWrt 25.12 — fixed hardcoded topbar (now live `system.board`/WAN + build-injected version); redesigned Login (branded split layout, Enter-to-submit, show/hide, theme toggle); CSS-only "feel pass" (press feedback, translucent chrome, scroll-edge fade, type tracking, a11y fallbacks); new IPv6 **announced DNS servers** field (server mode). Also doc fixes: apk/ipk = 23.05+24.10 ipk / snapshot apk. First physical-hardware row in HARDWARE_MATRIX. Code-only, not yet tagged.).
+Last updated: 2026-11-06 (added Jio JIDU model reference — 10 models across 2 HW families (MT7986A `mt76` + IPQ9574 `ath11k`) + JODU disambiguation. Session: @spdixit field report on JioRouter AX6000 JIDU6101 / OpenWrt 25.12 — fixed hardcoded topbar (now live `system.board`/WAN + build-injected version); redesigned Login (branded split layout, Enter-to-submit, show/hide, theme toggle); CSS-only "feel pass" (press feedback, translucent chrome, scroll-edge fade, type tracking, a11y fallbacks); new IPv6 **announced DNS servers** field (server mode). Also doc fixes: apk/ipk = 23.05+24.10 ipk / snapshot apk. First physical-hardware row in HARDWARE_MATRIX. Tagged v0.1.11.).
 
 ---
 
@@ -288,6 +288,14 @@ install-feedback items.
 - **IPv6 announced DNS servers** — new field on the IPv6 screen (server mode only): add/remove IPv6 DNS addresses announced via RA+DHCPv6 (`dhcp.lan` `dns` list). Caught a bug mid-review: clearing must `uciDelete` the option, not write `[]` (empty list leaves a bogus element — same pattern as `wan.ts`).
 - **Doc corrections** — `openwrt/README.md` + `release.yml` header wrongly said "24.10+ = apk"; corrected to 23.05+24.10 = ipk, snapshot = apk (matches the workflow matrix + `keys/README.md`). Added §0 device-support + a 2-row roaming entry (both radios `mt76`/`mt798x-wmac`) to `HARDWARE_MATRIX.md`; README now mentions OpenWrt 25.x. `docs/image.webp` (reporter screenshot, shows real network) is gitignored, not committed.
 - Verified by `svelte-check` + `vite build` only; **not yet run on a real router** — the IPv6 DNS announce (odhcpd), topbar live reads, and passwordless login all need on-device confirmation.
+
+**Jio JIDU model reference (for incoming field reports):** all branded "JioRouter
+AX6000" but two hardware families exist. Documented in `HARDWARE_MATRIX.md` §5.
+Sources: [wpfyorg/idu-unlock](https://github.com/wpfyorg/idu-unlock),
+[Frozenxc/JioAF](https://github.com/Frozenxc/JioAF).
+- **MediaTek `6j01`** (MT7986A Filogic 830, 512 MB RAM, 256 MB SPI-NAND, 5×GbE+USB, `mt76`/`mt798x-wmac`): JIDU6101 (Arcadyan, own identity `jidu6101`), 6201, 6401 (Sercomm), 6601, 6701 (Skyworth). All share `jidu6j01` identity except 6101. **Official OpenWrt** from 25.12.6, target `mediatek/filogic`. UnTangled confirmed on 6101; expect identical on siblings.
+- **Qualcomm `6j11`** (IPQ9574, `ath11k`): JIDU6111, 6411, 6611 (Sercomm), 6811, 6911. Target `qualcommbe/ipq95xx`. **No official OpenWrt** — community builds only. UnTangled untested on this family (different driver family from 6j01).
+- **JODU ≠ JIDU:** JODU models (51641/51642/52041/52140/52240/52540) are outdoor 5G/LTE radios running OE/Yocto, NOT OpenWrt. UnTangled cannot target them. Don't confuse the two.
 
 **Deferred backlog:** VPN *create* flow (keygen/PKI); mesh phase 3 (multi-node
 discovery, 802.11s backhaul, dumb-AP bridging); Extend Wi-Fi LAN sharing
