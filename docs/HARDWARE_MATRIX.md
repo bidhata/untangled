@@ -14,10 +14,23 @@ Status legend:
 - ❔ **Untested** — no hardware report yet (the default for everything).
 
 > Scope note (from the codebase): UnTangled targets OpenWRT **23.05** (stable,
-> ipk) and **24.10 / latest** (+ snapshot apk). Mesh is **not** certified
-> Multi-AP / prplMesh — it's "EasyMesh-like" (unified SSID + `dawn` roaming +
-> wired-first / 802.11s backhaul). Nothing below has been validated on physical
-> routers yet; every row starts ❔ until someone files a result.
+> ipk) and **24.10 / latest** (+ snapshot apk), and has a field report on
+> **25.12** (see §0). Mesh is **not** certified Multi-AP / prplMesh — it's
+> "EasyMesh-like" (unified SSID + `dawn` roaming + wired-first / 802.11s
+> backhaul). Roaming and mesh rows below are still unvalidated on physical
+> routers; each starts ❔ until someone files a result.
+
+---
+
+## 0. Device / UI support (basic bring-up)
+
+"Does UnTangled install, serve, detect the board, and render on this device?"
+This is a lighter bar than the roaming/mesh tables below — it does **not** imply
+roaming or mesh works, only that the UI runs and reads the router correctly.
+
+| Board / SoC | Model string (`system.board`) | OpenWRT release | UnTangled | Result | Notes |
+|---|---|---|---|---|---|
+| JioRouter AX6000 | `JioRouter AX6000 JIDU6101` | 25.12.6 `r33311-981c978eff` | 0.1 | ✅ | Reported by @spdixit. Network Map renders, board model + firmware detected, 24 clients listed, WAN online. Dual-band MediaTek MT798x (`mt76` / `mt798x-wmac`), 2.4 GHz + 5 GHz. Roaming/mesh **not** tested (see §1/§2). Earlier topbar showed stale demo values (`RT-AX88U`/`24.10`) — fixed: topbar now reads live `system.board`. |
 
 ---
 
@@ -30,6 +43,8 @@ opt-in**.
 
 | Board / SoC | Radio | Driver | OpenWRT release | 802.11k | 802.11v | 802.11r (FT) | Notes |
 |---|---|---|---|---|---|---|---|
+| JioRouter AX6000 (JIDU6101) | 2.4 GHz (phy0) | `mt76` (`mt798x-wmac`) | 25.12.6 | ❔ | ❔ | ❔ | MT798x SoC WiFi. Driver confirmed; roaming not tested. Also runs a STA uplink (`phy0-sta0` → `Airtel_sanj_7618`) with persistent `CTRL-EVENT-BEACON-LOSS` — a weak/unstable upstream link, not an UnTangled fault. |
+| JioRouter AX6000 (JIDU6101) | 5 GHz (phy1) | `mt76` (`mt798x-wmac`) | 25.12.6 | ❔ | ❔ | ❔ | MT798x SoC WiFi; ch36, 160 MHz, AP (`Dixit-Home`). Driver confirmed; roaming not tested. |
 | _example: TP-Link EAP615_ | 5 GHz | `ath11k` | 24.10 | ❔ | ❔ | ❔ | |
 | | 2.4 GHz | `ath9k` | 23.05 | ❔ | ❔ | ❔ | |
 | | 5 GHz | `ath10k` / `ath10k-ct` | 23.05 | ❔ | ❔ | ❔ | |

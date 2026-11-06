@@ -42,9 +42,9 @@ make package/untangled/compile V=s      # builds both untangled and untangled-fu
 ```
 
 Produces `untangled_*.{ipk|apk}` (core) and `untangled-full_*.{ipk|apk}` (meta).
-- **23.05 and earlier** use `.ipk` (opkg).
-- **24.10+** use `.apk`.
-Same files, different archive format — installed size is identical.
+- **23.05 and 24.10 (stable)** use `.ipk` (opkg).
+- **Snapshot (main)** uses `.apk` (apk) — the only line that does.
+Same payload, different archive format — installed size is identical.
 
 ## 4. Install
 

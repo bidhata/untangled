@@ -27,7 +27,7 @@ OpenWRT is the best router firmware there is, but its stock interface was built 
 
 You'll run a few commands **on the router**, either over SSH or in **LuCI → System → Custom Commands** (no SSH needed). It takes about a minute, and LuCI keeps working untouched the whole time.
 
-**Step 1. Which OpenWRT do you have?** In LuCI it's on the **Status → Overview** page (or run `cat /etc/openwrt_release`). If it says **23.05** or **24.10**, you're on *stable*, so use the **opkg** commands. If it says *SNAPSHOT*, use the **apk** commands. (When in doubt, you're almost certainly on stable.)
+**Step 1. Which OpenWRT do you have?** In LuCI it's on the **Status → Overview** page (or run `cat /etc/openwrt_release`). If it shows a numbered release like **23.05**, **24.10** or **25.12**, you're on *stable*, so use the **opkg** commands. If it says *SNAPSHOT*, use the **apk** commands. (When in doubt, you're almost certainly on stable.)
 
 **Step 2. Add the UnTangled feed and install.** Copy–paste the matching block:
 
@@ -102,7 +102,11 @@ Prefer a file? Every release attaches raw `.ipk` (stable) and `.apk` (snapshot) 
 
 UnTangled is an **OpenWRT** interface. It does not run on stock vendor firmware, DD-WRT, pfSense or similar.
 
-**Runs on** any device with **OpenWRT 23.05, 24.10, or snapshot**, on **any CPU architecture** (the UI package is `PKGARCH:=all`), with room for its dependencies: `uhttpd`, `uhttpd-mod-ubus`, `rpcd`, `rpcd-mod-file`, `rpcd-mod-luci`. The UI itself is ~75 KB gzipped and runs in your browser, so it adds little to router RAM.
+**Runs on** any device with **OpenWRT 23.05 or newer** (24.10 and the 25.x
+stable line are both fine, as is snapshot), on **any CPU architecture** (the UI
+package is `PKGARCH:=all`), with room for its dependencies: `uhttpd`,
+`uhttpd-mod-ubus`, `rpcd`, `rpcd-mod-file`, `rpcd-mod-luci`. The UI itself is
+~75 KB gzipped and runs in your browser, so it adds little to router RAM.
 
 **You'll want ≈ 8 MB+ of free flash.** On very small devices (the old 4/32 MB class) the base dependencies may not fit. That's a device limitation, not an UnTangled one.
 
@@ -114,7 +118,7 @@ UnTangled is an **OpenWRT** interface. It does not run on stock vendor firmware,
 | QoS · Dynamic DNS · UPnP · Dual-WAN · USB sharing · Usage history | `sqm-scripts` · `ddns-scripts` · `miniupnpd-nftables` · `mwan3` · `ksmbd`/`minidlna` · `vnstat` + `nlbwmon` |
 | Mesh Wi-Fi · Tailscale | `untangled-mesh` · `tailscale` |
 
-> **Beta.** Verified on OpenWRT 23.05 and snapshot container images (install, serving, signed feed). **Not yet validated across physical routers** — behaviour that depends on live radios, clients and vendor Wi-Fi drivers may vary by device. Mesh is OpenWRT-to-OpenWRT only and is **not** certified Multi-AP/prplMesh. Please [open an issue](https://github.com/bidhata/untangled/issues) with your model if something looks off.
+> **Beta.** Verified on OpenWRT 23.05 and snapshot container images (install, serving, signed feed), with a field report on the 25.x stable line (JioRouter AX6000 / JIDU6101 on OpenWrt 25.12 — UI + device detection; see [`docs/HARDWARE_MATRIX.md`](docs/HARDWARE_MATRIX.md)). **Not yet validated across physical routers** for roaming/mesh — behaviour that depends on live radios, clients and vendor Wi-Fi drivers may vary by device. Mesh is OpenWRT-to-OpenWRT only and is **not** certified Multi-AP/prplMesh. Please [open an issue](https://github.com/bidhata/untangled/issues) with your model if something looks off.
 
 ---
 
@@ -153,7 +157,7 @@ UnTangled is an **OpenWRT** interface. It does not run on stock vendor firmware,
   </tr>
 </table>
 
-**Everything in the box:** Network Map · Devices (fixed IP / block / Wake-on-LAN) · Mesh Wi-Fi · Guest Network · Traffic Monitor · Usage History · Parental Controls · Extend Wi-Fi (repeater) · Network Protection (ad/threat blocking) · Wireless (+ advanced radio tab) · Internet/WAN wizard · Dynamic DNS · QoS / Smart Queue · Dual WAN · UPnP · Port Forwarding · VPN (WireGuard + OpenVPN, server + client) · LAN · IPv6 · Firewall (zones) · DMZ · Administration (hostname, time, password, scheduled reboot, backup/restore) · System Log · USB Storage (SMB + DLNA) · Firmware upgrade · Software (apk/opkg).
+**Everything in the box:** Network Map · Devices (fixed IP / block / Wake-on-LAN) · Mesh Wi-Fi · Guest Network · Traffic Monitor · Usage History · Parental Controls · Extend Wi-Fi (repeater) · Network Protection (ad/threat blocking) · Wireless (+ advanced radio tab) · Internet/WAN wizard · Dynamic DNS · QoS / Smart Queue · Dual WAN · UPnP · Port Forwarding · VPN (WireGuard + OpenVPN, server + client) · LAN · IPv6 (server / relay + announced DNS) · Firewall (zones) · DMZ · Administration (hostname, time, password, scheduled reboot, backup/restore) · System Log · USB Storage (SMB + DLNA) · Firmware upgrade · Software (apk/opkg).
 
 Many advanced features light up only when their OpenWRT package is present and **degrade gracefully**: each shows an "install *package*" hint instead of an error when it isn't.
 
@@ -204,7 +208,7 @@ npm run build                    # -> dist/
 
 ## Status & roadmap
 
-UnTangled is in **beta**. The code is written to documented OpenWRT UCI/ubus/fw4 interfaces, and every release is installed and exercised in real OpenWRT containers (23.05 and snapshot: install, dependencies, HTTP serving, `/ubus` auth, ACLs, mesh backend) before it ships. It has **not yet been validated on many physical routers**, and that's where you come in.
+UnTangled is in **beta**. The code is written to documented OpenWRT UCI/ubus/fw4 interfaces, and every release is installed and exercised in real OpenWRT containers (23.05 and snapshot: install, dependencies, HTTP serving, `/ubus` auth, ACLs, mesh backend) before it ships. On physical hardware it has one field report so far — a JioRouter AX6000 (JIDU6101) on OpenWrt 25.12, UI and device detection confirmed — but it has **not yet been validated across many physical routers**, and that's where you come in. See [`docs/HARDWARE_MATRIX.md`](docs/HARDWARE_MATRIX.md) to add a result.
 
 Next up: hardware validation reports, VPN policy routing (per-device VPN, à la Merlin's VPN Director), and Mesh phase 3 (automatic node discovery, one-click dumb-AP bridging, 802.11s wireless backhaul).
 
@@ -221,7 +225,9 @@ Developed by **Krish Paul** · <me@krishnendu.com> · Licensed **GPL-2.0-or-late
 Website: <https://bidhata.github.io/untangled/> · Source: <https://github.com/bidhata/untangled>
 
 Thanks to **[@spdixit](https://github.com/spdixit)** for field testing and bug reports
-(device band/connection detection, applied-item ordering, and installed-app visibility).
+(device band/connection detection, applied-item ordering, installed-app visibility, and
+the first physical-hardware report — JioRouter AX6000 / JIDU6101 on OpenWrt 25.12, which
+surfaced the stale topbar model/version).
 
 Thanks to **[u/venkatx5](https://www.reddit.com/user/venkatx5/)** for install feedback and bug
 reports (device internet blocking and parental controls, Samba4 storage detection, device

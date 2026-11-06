@@ -5,8 +5,8 @@ name: Release packages
 # Trigger: push a version tag, e.g.
 #     git tag v0.2.0 && git push origin v0.2.0
 # The workflow builds both package formats and attaches them to the release:
-#   * .ipk  (opkg)  — OpenWRT 23.05 and earlier,  built with the 23.05.5 SDK
-#   * .apk  (apk)   — OpenWRT 24.10 and later,     built with the 24.10.8 SDK
+#   * .ipk  (opkg)  — OpenWRT stable (23.05 and 24.10),  built with the 23.05.5 SDK
+#   * .apk  (apk)   — OpenWRT snapshot (main) only,        built with the snapshot SDK
 # Each format yields two packages: `untangled` (core) and `untangled-full` (meta).
 #
 # You can also run it by hand from the Actions tab (workflow_dispatch) to get
