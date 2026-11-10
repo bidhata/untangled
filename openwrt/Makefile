@@ -1,9 +1,11 @@
 # OpenWRT packages for UnTangled. Build the SPA first (npm run build), copy
 # dist/ into ./files/www/untangled/, then build in an OpenWRT buildroot/SDK.
 #
-# Two packages from one source:
+# Three packages from one source:
 #   untangled       - minimal core: serve the UI + ubus/auth (HTTP). Tiny.
-#   untangled-full  - core + Wi-Fi scan, firmware/backup, and HTTPS (TLS).
+#   untangled-full  - core + Wi-Fi scan, firmware/backup, WoL, HTTPS by default.
+#   untangled-mesh  - mesh backend (rpcd helper + dawn/umdns); payload in files-mesh/.
+# Payload dirs: files/ (core), files-full/ (uci-defaults for -full), files-mesh/.
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=untangled

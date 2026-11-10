@@ -7,7 +7,7 @@ name: Release packages
 # The workflow builds both package formats and attaches them to the release:
 #   * .ipk  (opkg)  — OpenWRT stable (23.05 and 24.10),  built with the 23.05.5 SDK
 #   * .apk  (apk)   — OpenWRT snapshot (main) only,        built with the snapshot SDK
-# Each format yields two packages: `untangled` (core) and `untangled-full` (meta).
+# Each format yields three packages: `untangled` (core), `untangled-full` (meta) and `untangled-mesh`.
 #
 # You can also run it by hand from the Actions tab (workflow_dispatch) to get
 # the artifacts without cutting a release.
@@ -98,6 +98,7 @@ jobs:
           cp openwrt/Makefile feed/untangled/Makefile
           cp -r openwrt/files feed/untangled/files
           cp -r openwrt/files-mesh feed/untangled/files-mesh   # untangled-mesh package payload
+          cp -r openwrt/files-full feed/untangled/files-full   # untangled-full payload (HTTPS uci-defaults)
           mkdir -p feed/untangled/files/www/untangled
           cp -r dist/. feed/untangled/files/www/untangled/
           # Stamp the version derived above into the package Makefile.
