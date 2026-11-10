@@ -16,7 +16,7 @@ Status legend:
 > Scope note (from the codebase): UnTangled targets OpenWRT **23.05** (stable,
 > ipk) and **24.10 / latest** (+ snapshot apk), and has a field report on
 > **25.12** (see §0). Mesh is **not** certified Multi-AP / prplMesh — it's
-> "EasyMesh-like" (unified SSID + `dawn` roaming + wired-first / 802.11s
+> "EasyMesh-like" (unified SSID + `dawn` roaming + wired backhaul today, 802.11s planned
 > backhaul). Roaming and mesh rows below are still unvalidated on physical
 > routers; each starts ❔ until someone files a result.
 
@@ -51,7 +51,7 @@ opt-in**.
 | | 2.4/5 GHz | `mt76` | 24.10 | ❔ | ❔ | ❔ | |
 | | 6 GHz | `ath11k` | 24.10 | ❔ | ❔ | ❔ | |
 
-Driver families to cover (named in the codebase memory): `ath9k`, `ath10k` /
+Driver families to cover: `ath9k`, `ath10k` /
 `ath10k-ct`, `ath11k`, `mt76`. These behave differently for FT — test each
 separately rather than assuming one result carries over.
 
@@ -72,7 +72,7 @@ need ≥2 routers to validate**.
 |---|---|---|---|---|---|---|---|
 | _example_ | `mt76` | 24.10 | wired | ❔ | ❔ | ❔ | needs 2 nodes |
 
-Backhaul values: `wired` (default, safest) / `802.11s` (needs `wpad-mesh`).
+Backhaul: `wired` only today (the plugin stores the value; nothing configures 802.11s yet). `802.11s` is planned and will need `wpad-mesh`.
 
 ---
 

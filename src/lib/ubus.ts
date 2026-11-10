@@ -9,6 +9,7 @@ const NULL_SESSION = '00000000000000000000000000000000';
 // Dev-only mock backend (tree-shaken from production builds). When enabled,
 // every call() is served from in-memory fixtures instead of POST /ubus.
 import { MOCK_ENABLED, mockCall } from './mockUbus';
+import { session } from './stores';
 
 let sessionId = NULL_SESSION;
 let rpcId = 1;
@@ -59,16 +60,36 @@ export async function call<T = unknown>(
   if (!res.ok) throw new UbusError(-1, `HTTP ${res.status}`);
 
   const json = await res.json();
-  if (json.error) throw new UbusError(json.error.code ?? -1, json.error.message ?? 'RPC error');
+  if (json.error) throw await denied(new UbusError(json.error.code ?? -1, json.error.message ?? 'RPC error'), object);
 
   const result = json.result;
   // Some ubus methods reply with just the data; most reply [status, data].
   if (Array.isArray(result)) {
     const [status, data] = result;
-    if (status !== 0) throw new UbusError(status, STATUS[status] ?? `ubus status ${status}`);
+    if (status !== 0) throw await denied(new UbusError(status, STATUS[status] ?? `ubus status ${status}`), object);
     return data as T;
   }
   return result as T;
+}
+
+/**
+ * A denial (uhttpd's -32002 "Access denied" or rpcd's status 6) means either
+ * "the ACL does not allow this" or "the session expired". Tell them apart with
+ * one probe: `session access` with no object succeeds for any live session.
+ * If the probe fails too, the session is gone: clear it so the login screen
+ * shows, and say so instead of leaking a bare permission error.
+ */
+async function denied(err: UbusError, object: string): Promise<UbusError> {
+  const isDenial = err.code === 6 || err.code === -32002;
+  if (!isDenial || object === 'session' || sessionId === NULL_SESSION) return err;
+  try {
+    await call('session', 'access', {});
+    return err; // session is fine: a real ACL denial
+  } catch {
+    sessionId = NULL_SESSION;
+    session.set({ username: null });
+    return new UbusError(err.code, 'Your session expired. Please sign in again.');
+  }
 }
 
 /** `ubus list <pattern>` over JSON-RPC: object name -> its methods (only those the session may call). */
@@ -154,5 +175,10 @@ export function uciRollback() {
  *  like the other service paths do (usb/system/ddns). Best-effort reload. */
 export async function firewallApply(rollback = false, timeout = 120) {
   await (rollback ? uciApplyRollback(timeout) : uciApply());
-  await call('file', 'exec', { command: '/etc/init.d/firewall', params: ['reload'] }).catch(() => {});
+  try {
+    await call('file', 'exec', { command: '/etc/init.d/firewall', params: ['reload'] });
+  } catch (e) {
+    // The UCI change is saved; say so, but do not hide that the running ruleset may lag.
+    throw new Error(`Settings saved, but the firewall service did not reload: ${(e as Error).message}`);
+  }
 }

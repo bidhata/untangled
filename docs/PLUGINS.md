@@ -14,8 +14,10 @@ framework and survive core upgrades.
    and the router: visiting `#<plugin-id>` renders the plugin.
 
 On a device, the core app lives at `/www/untangled/`, so plugins live at
-`/www/untangled/plugins/`. A plugin **package** drops its folder there and adds a
-line to `index.json` (or ships its own and the core merges — see "Packaging").
+`/www/untangled/plugins/`. A plugin **package** drops its folder there and adds
+its entry to `index.json` from its own post-install script. (The core ships a
+static `index.json` listing its two built-in plugins; there is no merge or
+regeneration step.) Plugins load after login, in the app shell.
 
 ## The manifest — `plugins/index.json`
 
@@ -50,7 +52,8 @@ export default {
     container.innerHTML = `<div class="panel">…</div>`;
     const btn = container.querySelector('button');
     const onClick = async () => {
-      const r = await api.ubus.call('file', 'exec', { command: 'ping', params: ['-c','3','openwrt.org'] });
+      // Must match a `file` grant in the rpcd ACL exactly; the core grants `/bin/ping -c 3 -w 5 <host>`.
+      const r = await api.ubus.call('file', 'exec', { command: 'ping', params: ['-c','3','-w','5','openwrt.org'] });
       api.toast('done');
     };
     btn.addEventListener('click', onClick);
@@ -88,14 +91,21 @@ against the resolved executable and then the full command line.
 
 A plugin is its own `.apk`/`.ipk` that:
 - installs files to `/www/untangled/plugins/<id>/`,
-- registers itself in `index.json` (a `uci-defaults` script merges its entry, or
-  the core regenerates the manifest from the directory on boot),
-- optionally ships an rpcd ACL for any extra ubus objects it needs,
+- appends its entry to `/www/untangled/plugins/index.json` in its own
+  `uci-defaults`/postinst script (and removes it on uninstall),
+- ships an rpcd ACL fragment for any ubus object or `file` command it needs that
+  the core ACL does not already grant,
 - declares `DEPENDS:=+untangled`.
+
+**Trust.** A plugin runs with the full session of the logged-in user and can call
+anything the ACL allows that user. Install plugins only from feeds you trust.
 
 ## Example
 
-`public/plugins/ping/ping.js` ships with the repo as a working reference. It adds
-a **Tools → Ping Test** screen that runs `ping` on the router via
-`file.exec` — demonstrating nav + palette + ubus + core styling, with zero
-changes to the core.
+Two plugins ship inside the core package:
+
+- `public/plugins/ping/ping.js` — a **Tools → Ping Test** screen that runs `ping`
+  on the router via `file.exec`; demonstrates nav + palette + ubus + core styling.
+- `public/plugins/mesh/mesh.js` — the **Mesh Wi-Fi** screen; its device-side
+  backend is the `untangled.mesh` rpcd helper from the separate `untangled-mesh`
+  package, and the screen degrades to an "install untangled-mesh" card without it.

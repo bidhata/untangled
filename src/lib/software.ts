@@ -1,14 +1,11 @@
 // Package + firmware info.
 //
-// Two ways to list packages:
-//   1. The planned `untangled.sw` rpcd helper (richest: available + installed).
-//   2. Fallback via file.exec running the on-device package manager
-//      (`opkg list-installed` on stable 23.05/24.10/25.x, or `apk list
-//      --installed` on snapshot — apk is snapshot-only, not a 24.10 thing).
-// The fallback needs no extra package beyond file.exec (in the core ACL), so
-// the Software screen shows what's actually installed even before the helper
-// ships. "Notable apps" (tailscale, vnstat, …) are flagged so the UI can link
-// to a dedicated screen for the ones we have a frontend for.
+// The Software screen is read-only: it lists installed packages by running the
+// on-device package manager through a path-scoped `file.exec` grant
+// (`opkg list-installed` on stable 23.05/24.10/25.x, `apk list --installed` on
+// snapshot — apk is snapshot-only). Installing and removing packages is left to
+// opkg/apk on the command line. "Notable apps" (tailscale, vnstat, …) are
+// flagged so the UI can link to the dedicated screen we have for them.
 import { call } from './ubus';
 
 export interface FwInfo { firmware: string; kernel: string; target: string; }
@@ -114,21 +111,6 @@ async function listViaExec(): Promise<Pkg[] | null> {
 }
 
 export async function listPackages(): Promise<SoftwareList> {
-  // 1. Rich helper, if present.
-  try {
-    const r = await call<any>('untangled.sw', 'list', {});
-    const pkgs: Pkg[] = (r?.packages ?? []).map((p: any) => ({
-      name: String(p.name ?? ''),
-      version: String(p.version ?? ''),
-      installed: !!p.installed,
-      notable: notableFor(String(p.name ?? ''))
-    }));
-    if (pkgs.length) return { available: true, managed: true, packages: pkgs };
-  } catch {
-    /* helper not installed — fall through to file.exec */
-  }
-
-  // 2. Fallback: list installed packages with the on-device package manager.
   const installed = await listViaExec();
   if (installed) {
     installed.sort((a, b) => {
@@ -139,23 +121,16 @@ export async function listPackages(): Promise<SoftwareList> {
       available: false,
       managed: true,
       packages: installed,
-      message:
-        'Showing packages installed on this router. To install or remove packages from here, add the `untangled` package helper.'
+      message: 'Packages installed on this router. Install or remove packages with opkg or apk on the router itself.'
     };
   }
-
-  // 3. Nothing worked.
   return {
     available: false,
     managed: false,
     packages: [],
     message:
-      "Could not read the package list. This router's package manager " +
-      "(apk/opkg) did not respond — check that the UnTangled ACL allows " +
-      '`file.exec`, or install the `untangled` package helper for managed installs.'
+      "Could not read the package list. The router's package manager (opkg/apk) " +
+      'did not respond, or the UnTangled ACL does not allow running it.'
   };
 }
 
-export async function pkgAction(action: 'install' | 'remove' | 'update', name?: string): Promise<void> {
-  await call('untangled.sw', action, name ? { name } : {});
-}

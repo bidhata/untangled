@@ -23,7 +23,7 @@ define Package/untangled
   TITLE:=UnTangled web interface (core)
   URL:=https://github.com/bidhata/untangled
   # Minimal: serve static files + /ubus, with session auth and file ops.
-  DEPENDS:=+uhttpd +uhttpd-mod-ubus +rpcd +rpcd-mod-file
+  DEPENDS:=+uhttpd +uhttpd-mod-ubus +rpcd +rpcd-mod-file +rpcd-mod-luci
   PKGARCH:=all
 endef
 
