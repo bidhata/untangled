@@ -75,7 +75,7 @@ for q in '"cgi-io","upload","write"' '"cgi-io","download","read"' '"file","/tmp/
   [ "$r" = True ] && echo "  PASS  access $1 $2 $3 = $r" || { echo "  FAIL  access $1 $2 $3 = $r"; fail=1; }
 done
 echo "[ubus-level gates]"
-expect_ubus ALLOW $SID file exec; expect_ubus ALLOW $SID rpc-sys upgrade_start; expect_ubus DENY $SID rpc-sys factory; expect_ubus DENY $SID file list; expect_ubus DENY $SID file remove
+expect_ubus ALLOW $SID hostapd.phy0-ap0 get_clients; expect_ubus ALLOW $RO hostapd.wlan1 get_clients; expect_ubus DENY $SID hostapd.phy0-ap0 del_client; expect_ubus ALLOW $SID file exec; expect_ubus ALLOW $SID rpc-sys upgrade_start; expect_ubus DENY $SID rpc-sys factory; expect_ubus DENY $SID file list; expect_ubus DENY $SID file remove
 expect_ubus DENY $RO file exec; expect_ubus DENY $RO uci set; expect_ubus ALLOW $RO log read
 echo "[readonly]"
 expect ALLOW "ro: system board"                          $RO system board '{}'

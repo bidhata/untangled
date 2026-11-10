@@ -71,6 +71,20 @@ export async function call<T = unknown>(
   return result as T;
 }
 
+/** `ubus list <pattern>` over JSON-RPC: object name -> its methods (only those the session may call). */
+export async function listObjects(pattern: string): Promise<Record<string, unknown>> {
+  if (MOCK_ENABLED) return {};
+  const res = await fetch(UBUS_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ jsonrpc: '2.0', id: rpcId++, method: 'list', params: [sessionId, pattern] })
+  });
+  if (!res.ok) throw new UbusError(-1, `HTTP ${res.status}`);
+  const json = await res.json();
+  if (json.error) throw new UbusError(json.error.code ?? -1, json.error.message ?? 'RPC error');
+  return (json.result && typeof json.result === 'object' ? json.result : {}) as Record<string, unknown>;
+}
+
 export interface LoginResult {
   ubus_rpc_session: string;
   timeout: number;

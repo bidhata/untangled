@@ -12,6 +12,9 @@
 // This file is tree-shaken out of production builds since the guard is a
 // compile-time constant there.
 
+// Dev-only: `?wan=10.122.5.9` on the URL simulates a CGNAT/private WAN address.
+const MOCK_WAN_IP = (typeof location !== 'undefined' && new URLSearchParams(location.search).get('wan')) || '203.0.113.47';
+
 export const MOCK_ENABLED =
   import.meta.env.DEV && import.meta.env.VITE_MOCK !== 'false';
 
@@ -105,7 +108,7 @@ function interfaceDump() {
         l3_device: 'eth1',
         device: 'eth1',
         uptime: UPTIME,
-        'ipv4-address': [{ address: '203.0.113.47', mask: 24 }],
+        'ipv4-address': [{ address: MOCK_WAN_IP, mask: 24 }],
         'dns-server': ['1.1.1.1', '8.8.8.8'],
         route: [{ target: '0.0.0.0', mask: 0, nexthop: '203.0.113.1' }]
       },

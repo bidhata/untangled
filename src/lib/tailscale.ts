@@ -3,7 +3,7 @@
 // read from `tailscale status --json`; up/down toggle the connection. Logging
 // in is interactive (Tailscale prints an auth URL you open in a browser), so we
 // surface that URL rather than trying to complete auth from the router.
-import { call } from './ubus';
+import { call, UbusError } from './ubus';
 
 export interface TsPeer {
   name: string;
@@ -14,6 +14,8 @@ export interface TsPeer {
 }
 export interface TsStatus {
   installed: boolean;
+  /** Why we think it isn't usable (shown to the user when !installed). */
+  reason: string;
   state: 'running' | 'stopped' | 'needslogin' | 'unknown';
   selfIp: string;
   selfName: string;
@@ -23,12 +25,13 @@ export interface TsStatus {
 }
 
 const EMPTY: TsStatus = {
-  installed: false, state: 'unknown', selfIp: '', selfName: '',
+  installed: false, reason: '', state: 'unknown', selfIp: '', selfName: '',
   tailnet: '', peers: [], authUrl: null
 };
 
 interface ExecResult { code: number; stdout: string; stderr: string; }
-async function exec(command: string, params: string[]): Promise<ExecResult | null> {
+/** Runs the command; on a ubus-level failure returns a string explaining it instead. */
+async function exec(command: string, params: string[]): Promise<ExecResult | string> {
   try {
     const r = await call<any>('file', 'exec', { command, params });
     return {
@@ -36,8 +39,12 @@ async function exec(command: string, params: string[]): Promise<ExecResult | nul
       stdout: String(r?.stdout ?? ''),
       stderr: String(r?.stderr ?? '')
     };
-  } catch {
-    return null;
+  } catch (e) {
+    const code = e instanceof UbusError ? e.code : -1;
+    if (code === 4) return `The \`${command}\` command was not found on the router (rpcd looks in /usr/sbin, /usr/bin, /sbin, /bin).`;
+    if (code === 6) return `The router's access rules (rpcd ACL) do not allow running \`${command}\`. Reinstall or update the untangled package.`;
+    if (code === 7) return `\`${command}\` did not respond in time.`;
+    return `Could not run \`${command}\`: ${(e as Error).message}`;
   }
 }
 
@@ -52,11 +59,11 @@ function firstIp(ips: unknown): string {
 
 export async function loadTailscale(): Promise<TsStatus> {
   const r = await exec('tailscale', ['status', '--json']);
-  if (!r) return EMPTY;                       // file.exec unavailable
-  // Command missing -> non-zero with empty stdout, or shell "not found".
+  if (typeof r === 'string') return { ...EMPTY, reason: r };
+  // Binary present but no JSON: tailscaled not running, or it printed an error.
   if (!r.stdout.trim()) {
-    if (/not found|No such file/i.test(r.stderr)) return EMPTY;
-    return { ...EMPTY, installed: /tailscale/i.test(r.stderr) };
+    if (/not found|No such file/i.test(r.stderr)) return { ...EMPTY, reason: r.stderr.trim() };
+    return { ...EMPTY, installed: /tailscale/i.test(r.stderr), reason: r.stderr.trim() || `tailscale exited with code ${r.code}` };
   }
 
   let j: any;
@@ -94,6 +101,7 @@ export async function loadTailscale(): Promise<TsStatus> {
 
   return {
     installed: true,
+    reason: '',
     state,
     selfIp: firstIp(self?.TailscaleIPs),
     selfName: String(self?.HostName ?? ''),
@@ -109,6 +117,7 @@ export async function loadTailscale(): Promise<TsStatus> {
  *  and hang the rpcd exec. It still prints the login URL before returning. */
 export async function tailscaleUp(): Promise<{ authUrl: string | null }> {
   const r = await exec('tailscale', ['up', '--accept-routes', '--timeout=5s']);
+  if (typeof r === 'string') throw new Error(r);
   if (!r) throw new Error('tailscale command unavailable');
   const text = r.stdout + '\n' + r.stderr;
   const m = text.match(/https:\/\/login\.tailscale\.com\/\S+/);
@@ -119,6 +128,7 @@ export async function tailscaleUp(): Promise<{ authUrl: string | null }> {
 
 export async function tailscaleDown(): Promise<void> {
   const r = await exec('tailscale', ['down']);
+  if (typeof r === 'string') throw new Error(r);
   if (!r) throw new Error('tailscale command unavailable');
   if (r.code !== 0) throw new Error(r.stderr || `exit ${r.code}`);
 }

@@ -53,6 +53,9 @@
           "info",
           "status",
           "nodes"
+        ],
+        "hostapd.*": [
+          "get_clients"
         ]
       },
       "uci": [
@@ -298,6 +301,9 @@
         ],
         "log": [
           "read"
+        ],
+        "hostapd.*": [
+          "get_clients"
         ]
       },
       "uci": [

@@ -5,7 +5,7 @@
   import { loadTailscale, tailscaleUp, tailscaleDown, type TsStatus } from '../lib/tailscale';
   import { toast } from '../lib/toast';
 
-  let st: TsStatus = { installed: false, state: 'unknown', selfIp: '', selfName: '', tailnet: '', peers: [], authUrl: null };
+  let st: TsStatus = { installed: false, reason: '', state: 'unknown', selfIp: '', selfName: '', tailnet: '', peers: [], authUrl: null };
   let loading = true;
   let busy = false;
   let authUrl = '';
@@ -55,7 +55,8 @@
   <div class="panel"><div class="panel-b" style="color:var(--muted);text-align:center;padding:44px">Reading…</div></div>
 {:else if !st.installed}
   <div class="panel"><div class="panel-b">
-    <div class="caution"><Icon name="i-vpn" size={20} /><span>Tailscale isn't installed on this router. Install the <span class="mono">tailscale</span> package (Software screen or <span class="mono">apk add tailscale</span>) to use it here.</span></div>
+    <div class="caution"><Icon name="i-vpn" size={20} /><span>Tailscale isn't available on this router. Install the <span class="mono">tailscale</span> package from the Software screen (or <span class="mono">opkg install tailscale</span> / <span class="mono">apk add tailscale</span>) and make sure the <span class="mono">tailscale</span> service is started.</span></div>
+    {#if st.reason}<div class="hint mono" style="margin-top:10px;white-space:pre-wrap">{st.reason}</div>{/if}
   </div></div>
 {:else}
   <div class="panel" style="margin-bottom:18px"><div class="panel-b" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">

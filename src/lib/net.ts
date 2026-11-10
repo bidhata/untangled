@@ -1,6 +1,6 @@
 // Network data layer: fetch from ubus/luci-rpc and normalize into UI shapes.
 // Field shapes follow OpenWRT 23.05 / 24.10; adjust if your build differs.
-import { call } from './ubus';
+import { call, listObjects } from './ubus';
 
 export type DeviceKind =
   | 'd-phone' | 'd-laptop' | 'd-desktop' | 'd-tv' | 'd-game'
@@ -38,6 +38,36 @@ export async function getSysInfo(): Promise<SysInfo> {
   const memUsedPct = total ? Math.round(((total - avail) / total) * 100) : 0;
   const load1 = Array.isArray(s?.load) ? +(num(s.load[0]) / 65536).toFixed(2) : 0;
   return { uptimeSec: num(s?.uptime), load1, memUsedPct };
+}
+
+/** RFC1918 or CGNAT (100.64/10) address → the router sits behind another NAT. */
+export function isPrivateIp(ip: string | null | undefined): boolean {
+  if (!ip) return false;
+  const m = ip.match(/^(\d+)\.(\d+)\./);
+  if (!m) return false;
+  const a = +m[1], b = +m[2];
+  return a === 10 || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 100 && b >= 64 && b <= 127);
+}
+
+let publicIpCache: { ip: string | null; at: number } | null = null;
+/**
+ * The address the internet sees. The router cannot know this behind carrier
+ * NAT, so the *browser* asks a public echo service (nothing goes through the
+ * router's own software). Cached for 10 minutes; null when offline/blocked.
+ */
+export async function getPublicIp(): Promise<string | null> {
+  if (publicIpCache && Date.now() - publicIpCache.at < 600_000) return publicIpCache.ip;
+  let ip: string | null = null;
+  try {
+    const ctl = new AbortController();
+    const t = setTimeout(() => ctl.abort(), 5000);
+    const r = await fetch('https://api.ipify.org?format=json', { signal: ctl.signal, cache: 'no-store' });
+    clearTimeout(t);
+    const j = await r.json();
+    if (typeof j?.ip === 'string' && /^[0-9a-f.:]+$/i.test(j.ip)) ip = j.ip;
+  } catch { /* offline, blocked, or no CORS — leave null */ }
+  publicIpCache = { ip, at: Date.now() };
+  return ip;
 }
 
 export async function getWan(): Promise<WanStatus> {
@@ -98,50 +128,87 @@ function dbmToBars(dbm: number): number {
   return dbm ? 1 : 0;
 }
 
+/** Why the last wireless lookup could not classify devices ('' when it worked). Shown as a hint in the UI. */
+export let wifiDiag = '';
+
+function bandFromFreq(mhz: number): Band {
+  if (mhz >= 5925) return '6';
+  if (mhz >= 4900) return '5';
+  if (mhz >= 2400) return '24';
+  return '?';
+}
+
 // Returns a map of client MAC -> {band, signal}, plus whether the wireless
 // subsystem actually answered. `ok=false` means we could not read any radio,
 // so callers must NOT assume unlisted devices are wired.
+//
+// Sources, in order, per AP interface:
+//   1. hostapd.<ifname> get_clients — present on every OpenWRT Wi-Fi router
+//      (wpad), needs no rpcd module; carries freq (→ band) and signal.
+//   2. iwinfo assoclist — needs rpcd-mod-iwinfo (untangled-full only).
+// Interface names come from `network.wireless status`; if that fails we fall
+// back to listing the hostapd.* ubus objects directly.
 async function getWirelessAssoc(): Promise<{
   map: Record<string, { band: Band; signal: number }>;
   ok: boolean;
 }> {
   const map: Record<string, { band: Band; signal: number }> = {};
-  let status: any;
-  try {
-    status = await call<any>('network.wireless', 'status');
-  } catch {
-    return { map, ok: false };
-  }
-  const radios = Object.values<any>(status ?? {});
-  if (!radios.length) return { map, ok: false };
+  const ifaces: { ifname: string; band: Band }[] = [];
+  const problems: string[] = [];
 
-  let sawIface = false;
-  const lookups: Promise<void>[] = [];
-  for (const radio of radios) {
-    const band = radioBand(radio);
-    for (const iface of radio?.interfaces ?? []) {
-      // ifname sits directly on the interface or under its config, by build.
-      const ifname = iface?.ifname || iface?.config?.ifname || iface?.iface;
-      if (!ifname) continue;
-      sawIface = true;
-      lookups.push(
-        call<any>('iwinfo', 'assoclist', { device: ifname })
-          .then((al) => {
-            for (const r of al?.results ?? []) {
-              if (r?.mac) map[String(r.mac).toUpperCase()] = { band, signal: dbmToBars(num(r.signal)) };
-            }
-          })
-          .catch(() => {
-            /* interface may be down or iwinfo missing */
-          })
-      );
+  try {
+    const status = await call<any>('network.wireless', 'status');
+    for (const radio of Object.values<any>(status ?? {})) {
+      const band = radioBand(radio);
+      for (const iface of radio?.interfaces ?? []) {
+        // ifname sits directly on the interface or under its config, by build.
+        const ifname = iface?.ifname || iface?.config?.ifname || iface?.iface;
+        if (ifname) ifaces.push({ ifname: String(ifname), band });
+      }
+    }
+    if (!ifaces.length) problems.push('network.wireless reported no radio interfaces');
+  } catch (e) {
+    problems.push(`network.wireless status: ${(e as Error).message}`);
+  }
+  if (!ifaces.length) {
+    try {
+      for (const name of Object.keys(await listObjects('hostapd.*'))) {
+        ifaces.push({ ifname: name.slice('hostapd.'.length), band: '?' });
+      }
+    } catch (e) {
+      problems.push(`ubus list hostapd.*: ${(e as Error).message}`);
     }
   }
-  await Promise.all(lookups);
-  // If radios exist but none exposed an interface we could query, we still
-  // can't tell wired from wireless — report not-ok so devices show Unknown
-  // rather than being mislabeled "Wired".
-  return { map, ok: sawIface };
+
+  let answered = 0;
+  await Promise.all(ifaces.map(async ({ ifname, band }) => {
+    try {
+      const r = await call<any>('hostapd.' + ifname, 'get_clients');
+      if (!r || typeof r.clients !== 'object') throw new Error('no clients field');
+      const b: Band = band !== '?' ? band : bandFromFreq(num(r?.freq));
+      for (const [mac, c] of Object.entries<any>(r?.clients ?? {})) {
+        if (c?.assoc === false) continue;
+        map[mac.toUpperCase()] = { band: b, signal: c?.signal != null ? dbmToBars(num(c.signal)) : 3 };
+      }
+      answered++;
+      return;
+    } catch (e) {
+      problems.push(`hostapd.${ifname}: ${(e as Error).message}`);
+    }
+    try {
+      const al = await call<any>('iwinfo', 'assoclist', { device: ifname });
+      for (const r of al?.results ?? []) {
+        if (r?.mac) map[String(r.mac).toUpperCase()] = { band, signal: dbmToBars(num(r.signal)) };
+      }
+      answered++;
+    } catch (e) {
+      problems.push(`iwinfo assoclist ${ifname}: ${(e as Error).message}`);
+    }
+  }));
+
+  const ok = answered > 0;
+  wifiDiag = ok ? '' : (problems[0] ?? 'no wireless interfaces found');
+  return { map, ok };
 }
 
 const MAC_RE = /^([0-9a-f]{2}:){5}[0-9a-f]{2}$/i;
