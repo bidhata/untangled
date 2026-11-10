@@ -77,7 +77,12 @@ Passed to `mount(container, api)`. Stable contract, versioned by
 
 ACLs still apply: a plugin can only call ubus methods the logged-in session is
 granted. To use a new ubus object, the plugin package ships its own
-`/usr/share/rpcd/acl.d/*.json`.
+`/usr/share/rpcd/acl.d/*.json`. The same goes for `file.exec`, `file.read` and
+`file.write`: the core ACL grants them only for the exact commands and paths the
+core UI uses (see `openwrt/files/usr/share/rpcd/acl.d/untangled.json`), so a
+plugin that runs a command must ship a `file` grant for it, e.g.
+`"file": { "/bin/ping -c 3 -w 5 [!-]*": ["exec"] }` — the pattern is matched
+against the resolved executable and then the full command line.
 
 ## Packaging a plugin for OpenWRT
 
