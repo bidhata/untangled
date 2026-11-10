@@ -1,14 +1,13 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import Icon from '../components/Icon.svelte';
-  import { getFirmware, listPackages, pkgAction, type FwInfo, type SoftwareList } from '../lib/software';
+  import { getFirmware, listPackages, type FwInfo, type SoftwareList } from '../lib/software';
   import { toast } from '../lib/toast';
   import { go } from '../lib/stores';
 
   let fw: FwInfo | null = null;
   let list: SoftwareList = { available: false, managed: false, packages: [] };
   let loading = true;
-  let busy = false;
   let q = '';
 
   async function load() {
@@ -36,12 +35,6 @@
 
   function open(screen?: string) { if (screen) go(screen); }
 
-  async function act(action: 'install' | 'remove' | 'update', name?: string) {
-    busy = true;
-    try { await pkgAction(action, name); toast(action + (name ? ' ' + name : '') + ' done'); await load(); }
-    catch { toast('Action failed'); }
-    finally { busy = false; }
-  }
 </script>
 
 <div class="page-head"><div><div class="breadcrumb">System</div><h1>Software</h1><p>Firmware and packages — all on the router, no cloud account.</p></div></div>
@@ -93,10 +86,7 @@
               </td>
               <td class="mono">{p.version}</td>
               <td style="text-align:right">
-                {#if list.available}
-                  {#if p.installed}<button class="btn" style="padding:6px 13px" on:click={() => act('remove', p.name)} disabled={busy}>Remove</button>
-                  {:else}<button class="btn primary" style="padding:6px 13px" on:click={() => act('install', p.name)} disabled={busy}>Install</button>{/if}
-                {:else if p.notable?.screen}
+                {#if p.notable?.screen}
                   <button class="btn" style="padding:6px 13px" on:click={() => open(p.notable?.screen)}>Open</button>
                 {:else}
                   <span class="hint">installed</span>

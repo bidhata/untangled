@@ -9,8 +9,7 @@
         ],
         "uci": [
           "get",
-          "state",
-          "changes"
+          "state"
         ],
         "network.device": [
           "status"
@@ -45,9 +44,6 @@
         ],
         "file": [
           "read"
-        ],
-        "untangled.sw": [
-          "list"
         ],
         "untangled.mesh": [
           "info",
@@ -119,12 +115,6 @@
         ],
         "session": [
           "destroy"
-        ],
-        "untangled.sw": [
-          "update",
-          "install",
-          "remove",
-          "upgrade"
         ],
         "untangled.mesh": [
           "set_roaming",

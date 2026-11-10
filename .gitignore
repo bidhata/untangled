@@ -52,3 +52,6 @@ docs/image.jpeg
 # AI-assistant working notes (handoff/memory for coding assistants). Kept local, not published.
 docs/HANDOFF.md
 docs/CODEBASE_MEMORY.md
+
+# EGM review reports (AI-generated review artifacts). Local only.
+docs/egm/
