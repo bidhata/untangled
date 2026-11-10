@@ -71,7 +71,7 @@ apk add untangled-full
 | Package | What you get |
 |---|---|
 | `untangled` | Core UI + `/ubus` + session auth. HTTP-only, minimal. |
-| `untangled-full` | Core **+** HTTPS, Wi-Fi scan, firmware upgrade, Wake-on-LAN. |
+| `untangled-full` | Core **+** HTTPS by default, Wi-Fi scan, firmware upgrade, Wake-on-LAN. |
 | `untangled-mesh` | Mesh Wi-Fi backend (dawn roaming + umdns discovery). |
 
 > **Which one? Just install `untangled-full`.** It gives you everything.
@@ -83,7 +83,7 @@ apk add untangled-full
 > its own file is tiny, but installing it pulls in everything. Think of it like
 > a "meal deal" ticket: small ticket, full meal.
 
-Prefer a file? Every release attaches raw `.ipk` (stable) and `.apk` (snapshot) on [Releases](https://github.com/bidhata/untangled/releases). The package is architecture-independent (`PKGARCH:=all`), so one `.ipk` covers every current stable release; apk is used only by OpenWRT snapshot. Post-install ACL notes, size table and HTTPS setup: [`openwrt/README.md`](openwrt/README.md).
+Prefer a file? Every release attaches raw `.ipk` (stable) and `.apk` (snapshot) on [Releases](https://github.com/bidhata/untangled/releases). The package is architecture-independent (`PKGARCH:=all`), so one `.ipk` covers every current stable release; apk is used only by OpenWRT snapshot. Post-install ACL notes, size table and HTTPS setup: [`openwrt/README.md`](openwrt/README.md). What a logged-in session is allowed to do on the router (path-scoped rpcd ACL), HTTPS and the signing key: [`docs/SECURITY.md`](docs/SECURITY.md).
 
 **Reading the file names on the Releases page:**
 

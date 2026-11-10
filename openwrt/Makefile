@@ -45,10 +45,10 @@ define Package/untangled-full
 endef
 
 define Package/untangled-full/description
-  Meta-package (ships no files of its own — it just pulls in the core UI plus
-  the extras below; the small package size is expected). UnTangled core plus
-  Wi-Fi scan/association info, firmware upgrade (rpc-sys + cgi-io), Wake-on-LAN
-  (etherwake), and TLS for HTTPS.
+  Meta-package (pulls in the core UI plus the extras below; the small package
+  size is expected). UnTangled core plus Wi-Fi scan/association info, firmware
+  upgrade (rpc-sys + cgi-io), Wake-on-LAN (etherwake), and HTTPS by default
+  (self-signed cert via px5g; plain HTTP redirects to HTTPS).
 
   Optional feature screens install their backing package on demand (each
   degrades to an "install X" prompt when absent): QoS -> sqm-scripts,
@@ -97,7 +97,8 @@ endef
 
 # Meta-package: no files, just dependencies.
 define Package/untangled-full/install
-	true
+	$(INSTALL_DIR) $(1)/etc/uci-defaults
+	$(INSTALL_BIN) ./files-full/etc/uci-defaults/91-untangled-https $(1)/etc/uci-defaults/91-untangled-https
 endef
 
 # Mesh backend: rpcd helper + first-boot defaults. (ACL methods are granted in

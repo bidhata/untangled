@@ -136,7 +136,8 @@ mwan3, ksmbd, minidlna, vnstat, nlbwmon, etherwake.
 - apk does NOT exist in stable OpenWRT (23.05 & 24.10 are **ipk-only**); real `.apk` only from the **snapshot** SDK.
 - Don't pre-gzip into the package (uhttpd can't serve precompressed; squashfs/overlay already compresses).
 - `PKGARCH:=all` (one set covers all stable archs).
-- ACL `untangled.json`: read role must NOT include broad `file`; write `file` scoped to exec/write (+ read for crontab). Grants `untangled.mesh` methods (harmless when helper absent → NOT_FOUND → UI degrades).
+- ACL `untangled.json` is **path-scoped** (since 0.1.13): every `file` read/write/exec grant names an exact path or exact "command args" line (rpcd fnmatch, checked against the resolved executable then the full command line; newer rpcd also realpath()s read/write paths, hence `/proc/*/mounts`). Adding a screen that execs something = add its line to the ACL or it gets "Access denied". `cgi-io` scopes (`upload`/`download`) are granted too (firmware upload + backup download need them). Read-only role: no `file`, `uci` limited to `system` (no Wi-Fi/PPPoE/WireGuard secrets). `uci: *` stays on the admin role (it is a router admin UI; same as LuCI). Grants `untangled.mesh` methods (harmless when helper absent → NOT_FOUND → UI degrades). Verified on 23.05 + snapshot rootfs with an ubus probe suite (allow list works, `/bin/sh`, `/etc/shadow`, traversal, flag-injection all denied).
+- `untangled-full` ships `91-untangled-https` uci-defaults: sets `uhttpd.main.redirect_https=1` (guarded on `listen_https` being set) → plain HTTP 307s to HTTPS with the px5g self-signed cert. Verified in 23.05 rootfs.
 
 ---
 

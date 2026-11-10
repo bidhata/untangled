@@ -6,7 +6,7 @@ Two packages are built from one source:
 | Package | What it adds | Typical new bytes on disk* |
 |---|---|---|
 | **`untangled`** | Core: serve the UI + `/ubus`, session auth, file ops. **HTTP only.** | ~65 KB app + ~75 KB deps (if not already present) |
-| **`untangled-full`** | Core **+** Wi-Fi scan, firmware/backup, **HTTPS (TLS)** | + up to ~300 KB (often ~0 — mbedtls is usually already on Wi-Fi images) |
+| **`untangled-full`** | Core **+** Wi-Fi scan, firmware/backup, **HTTPS by default** | + up to ~300 KB (often ~0 — mbedtls is usually already on Wi-Fi images) |
 
 \* Installed (uncompressed) sizes. Real flash use is lower: the overlay
 (JFFS2/UBIFS) and SquashFS compress files, so the plain ~200 KB of app assets
@@ -55,8 +55,12 @@ opkg install untangled           # or: apk add untangled
 opkg install untangled-full      # or: apk add untangled-full
 ```
 
-HTTP-only is the default. For HTTPS, install `untangled-full` (or just
-`libustream-mbedtls` + `px5g-mbedtls`) and point a uhttpd listener at the cert.
+The core package is HTTP-only. `untangled-full` pulls in TLS + `px5g` and its
+`uci-defaults` turns on uhttpd's HTTP→HTTPS redirect (307), using the self-signed
+certificate uhttpd generates on first boot — same as `luci-ssl`. The redirect is
+only enabled if uhttpd already has a `listen_https` entry, so it cannot lock you
+out. To go back to plain HTTP: `uci set uhttpd.main.redirect_https=0; uci commit
+uhttpd; /etc/init.d/uhttpd restart`.
 
 ## 5. Grant a login the ACL group
 
@@ -71,6 +75,11 @@ config login
 ```
 
 Then `/etc/init.d/rpcd restart`.
+
+The `untangled` group grants unrestricted UCI (it is an admin UI) but only an
+exact allow-list of files and commands — no shell, no `file.list`/`remove`, no
+`rpc-sys factory`. `untangled-readonly` gets dashboards/logs only and cannot read
+configs that hold credentials. Details: [`docs/SECURITY.md`](../docs/SECURITY.md).
 
 ## Coexisting with LuCI
 
