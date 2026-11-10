@@ -2,7 +2,7 @@
   import { onMount, onDestroy } from 'svelte';
   import Icon from '../components/Icon.svelte';
   import {
-    getBoard, getSysInfo, getWan, getClients, formatUptime,
+    getBoard, getSysInfo, getWan, getClients, formatUptime, isPrivateIp, getPublicIp, wifiDiag,
     bandName, bandStroke, bandClass,
     type BoardInfo, type SysInfo, type WanStatus, type Client, type Band
   } from '../lib/net';
@@ -13,6 +13,8 @@
   let sys: SysInfo | null = null;
   let wan: WanStatus | null = null;
   let clients: Client[] = [];
+  let publicIp: string | null = null; // only looked up when the WAN address is private/CGNAT
+  let diag = ''; // why Wi-Fi classification failed, if it did
   let selected: string = 'router'; // 'router' | 'internet' | client id
   let expandedBand: Band | null = null; // which band hub is expanded on the map
   let query = ''; // table search filter
@@ -21,8 +23,9 @@
   async function loadAll() {
     try {
       const [b, s, w, c] = await Promise.all([getBoard(), getSysInfo(), getWan(), getClients()]);
-      board = b; sys = s; wan = w; clients = c;
+      board = b; sys = s; wan = w; clients = c; diag = wifiDiag;
       error = '';
+      if (isPrivateIp(w.ipv4)) publicIp = await getPublicIp();
     } catch (e) {
       error = 'Could not read status from the router. Check the connection and try again.';
     } finally {
@@ -32,7 +35,7 @@
   async function refreshLight() {
     try {
       const [s, w, c] = await Promise.all([getSysInfo(), getWan(), getClients()]);
-      sys = s; wan = w; clients = c;
+      sys = s; wan = w; clients = c; diag = wifiDiag;
     } catch { /* keep last good values */ }
   }
 
@@ -117,11 +120,19 @@
     <div class="tile">
       <div class="k"><Icon name="i-wan" size={15} /> Internet</div>
       <div class="v" style="font-size:16px;margin-top:11px;color:{wan?.up ? 'var(--good)' : 'var(--crit)'}">{wan?.up ? 'Connected' : 'Offline'}</div>
-      <div class="hint mono" style="margin-top:4px">{wan?.ipv4 ?? '—'}</div>
+      {#if isPrivateIp(wan?.ipv4)}
+        <div class="hint mono" style="margin-top:4px">{publicIp ?? wan?.ipv4}</div>
+        <div class="hint" style="margin-top:2px">behind carrier NAT</div>
+      {:else}
+        <div class="hint mono" style="margin-top:4px">{wan?.ipv4 ?? '—'}</div>
+      {/if}
     </div>
     <div class="tile">
       <div class="k"><Icon name="i-clients" size={15} /> Clients</div>
       <div class="v">{clients.length} <small>online</small></div>
+      {#if diag && clients.length && clients.every((c) => c.band === '?')}
+        <div class="hint" style="margin-top:4px" title={diag}>Wi-Fi status unavailable: {diag}</div>
+      {/if}
     </div>
     <div class="tile">
       <div class="k"><Icon name="i-cpu" size={15} /> Load (1m)</div>
@@ -210,7 +221,13 @@
           <div class="kv"><span class="l">Clients</span><span class="r">{clients.length} online</span></div>
         {:else if selected === 'internet'}
           <div class="big"><div class="devicon"><Icon name="d-cloud" size={24} /></div><div><b>WAN · {wan?.up ? 'Connected' : 'Offline'}</b><div class="m">{wan?.proto}</div></div></div>
-          <div class="kv"><span class="l">Public IP</span><span class="r">{wan?.ipv4 ?? '—'}</span></div>
+          {#if isPrivateIp(wan?.ipv4)}
+            <div class="kv"><span class="l">Public IP</span><span class="r">{publicIp ?? '—'}</span></div>
+            <div class="kv"><span class="l">Router WAN IP</span><span class="r">{wan?.ipv4}</span></div>
+            <div class="hint" style="margin:6px 0 10px">Your internet provider puts this router behind carrier-grade NAT (the WAN address is private). Port forwarding, DMZ and Dynamic DNS can't be reached from the internet on this connection; a VPN such as Tailscale or WireGuard with an outside peer still works.</div>
+          {:else}
+            <div class="kv"><span class="l">Public IP</span><span class="r">{wan?.ipv4 ?? '—'}</span></div>
+          {/if}
           <div class="kv"><span class="l">Gateway</span><span class="r">{wan?.gateway ?? '—'}</span></div>
           <div class="kv"><span class="l">DNS</span><span class="r">{wan?.dns?.join(' · ') || '—'}</span></div>
           <div class="kv"><span class="l">Uptime</span><span class="r">{formatUptime(wan?.uptimeSec ?? 0)}</span></div>
