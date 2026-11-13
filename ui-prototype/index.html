@@ -788,9 +788,11 @@ details.adv .advb{padding:0 15px 15px;font-size:12.5px;color:var(--muted);line-h
       <div class="panel" style="margin-bottom:18px"><div class="panel-b" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
         <div class="devicon" style="width:52px;height:52px"><svg><use href="#i-pkg"/></svg></div>
         <div style="flex:1;min-width:200px"><div style="font-size:15px;font-weight:700">Firmware · UnTangled 1.0-beta</div><div class="hint">OpenWRT 24.10.0 · r28427 · kernel 6.6.73</div></div>
-        <span class="pill"><span class="dot"></span> Up to date</span>
-        <button class="btn" type="button" id="fwCheck">Check for updates</button>
       </div></div>
+      <div class="panel" style="margin-bottom:18px">
+        <div class="panel-h"><h2>UnTangled updates</h2><span class="sub">installed 0.1.16</span></div>
+        <div class="panel-b" id="updBody"></div>
+      </div>
       <div class="tiles" style="grid-template-columns:repeat(3,1fr)">
         <div class="tile"><div class="k"><svg><use href="#i-pkg"/></svg> Installed</div><div class="v">147 <small>packages</small></div></div>
         <div class="tile"><div class="k"><svg><use href="#i-up"/></svg> Updates</div><div class="v">4 <small>available</small></div></div>
@@ -1720,7 +1722,28 @@ document.querySelectorAll("#screen-software [data-filter]").forEach(t=>t.addEven
   t.classList.add("active"); swFilter=t.dataset.filter; renderSoftware();
 }));
 $("swSearch").addEventListener("input",renderSoftware);
-$("fwCheck").addEventListener("click",()=>toast("Firmware is up to date (simulated)"));
+/* ---------- UnTangled self-update (simulated; same steps as the app) ---------- */
+(function(){
+  const body=$("updBody"); if(!body) return;
+  let version="0.1.16";
+  const row=(left,btn)=>`<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap"><div style="flex:1;min-width:220px">${left}</div>${btn}</div>`;
+  function idle(){
+    body.innerHTML=row('<span class="hint">Looks for a newer UnTangled in the package feed. The router needs to be online for this.</span>','<button class="btn primary" type="button" id="updCheck">Check for updates</button>');
+    $("updCheck").onclick=()=>{ $("updCheck").disabled=true; $("updCheck").textContent="Checking…"; setTimeout(version==="0.1.16"?offer:current,900); };
+  }
+  function offer(){
+    body.innerHTML=row('<div style="font-weight:700">Version 0.1.17 is available</div><div class="hint mono">untangled 0.1.16-1 → 0.1.17-1 · untangled-full 0.1.16-1 → 0.1.17-1</div>','<button class="btn primary" type="button" id="updNow">Update now</button>');
+    $("updNow").onclick=()=>{
+      body.innerHTML='<p style="margin:0;font-weight:600">Updating untangled to 0.1.17-1…</p><p class="hint" style="margin:6px 0 0">Keep this page open. It reloads by itself when the update is done.</p>';
+      setTimeout(()=>{ version="0.1.17"; document.querySelector("#screen-software .panel-h .sub").textContent="installed 0.1.17"; current(); toast("UnTangled updated (simulated)"); },2200);
+    };
+  }
+  function current(){
+    body.innerHTML=row('<span style="font-weight:600;color:var(--good)">UnTangled is up to date.</span>','<button class="btn" type="button" id="updAgain">Check again</button>');
+    $("updAgain").onclick=idle;
+  }
+  idle();
+})();
 $("swRefresh").addEventListener("click",()=>toast("Package list refreshed (simulated)"));
 
 /* ---------- Administration (config profiles + backup) ---------- */

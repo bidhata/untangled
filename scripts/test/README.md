@@ -29,6 +29,20 @@ non-zero if any check fails and leaves the container running so you can look
 | `ui-validation.cjs` | Drives the real UI in headless Chromium: LAN, WAN and port-forward forms refuse bad input; the Extend Wi-Fi screen reports a failed scan cleanly. |
 | `ui-checks.cjs` | UI regressions: session restore, scheduled reboot file, time zone, config backup download, failed-save isolation, USB sharing guard, DDNS provider, Network Doctor, logout. Runs last: it removes `dhcp.lan` to force a failed save and restarts rpcd. |
 
+## The self-update check
+
+```sh
+scripts/test/update-check.sh        # container "untangled-update" on port 18081
+```
+
+Packages the current code as version 0.0.1, installs it on a fresh router with
+the **live signed feed** configured, then clicks **Check for updates → Update
+now** in a browser (`ui-update.cjs`) and verifies the router and the page both
+end up on the feed's version. Needs internet. It tests core + mesh over HTTP;
+with `untangled-full` installed the HTTPS redirect is on, so browse over HTTPS
+(`SCHEME=https`, publish port 443). `PM=apk` runs the same script against a
+snapshot router. `ui-update.cjs` also has `nofeed` and `current` modes.
+
 ## Other scripts
 
 - `router-boot.sh <name> <port> [image]` — just boot and seed a router with the
@@ -61,4 +75,12 @@ Things worth knowing when adding checks:
 - `docker cp` into the container's `/tmp` is lost (tmpfs); copy into `/root`.
 - A DMZ rule sends all inbound WAN traffic elsewhere, which here includes your
   own connection to the test router. Remove it with `docker exec`.
+- An install script that reloads rpcd (`untangled`, `untangled-mesh`) makes
+  uhttpd drop or hang the reply to the call that started it; judge the result
+  by reading state back, never by waiting on that call.
+- All packaged files carry the SDK's fixed build date and opkg overwrites in
+  place, so `index.html` keeps the same ETag across versions unless the
+  install script touches it (it does, since 0.1.17).
+- `apk upgrade <name>` does nothing for a package installed from a local
+  `.apk` file (pinned in `/etc/apk/world`); `apk add --upgrade <name>` works.
 - `grep -c` exits 1 on a zero count; the suites append `; true` to every command.

@@ -70,6 +70,12 @@
         ],
         "/proc/*/mounts": [
           "read"
+        ],
+        "/etc/opkg/customfeeds.conf": [
+          "read"
+        ],
+        "/etc/apk/repositories.d/untangled.list": [
+          "read"
         ]
       },
       "cgi-io": {
@@ -251,6 +257,36 @@
           "exec"
         ],
         "/bin/ping -c 3 -w 5 [!-]*": [
+          "exec"
+        ],
+        "/bin/opkg update": [
+          "exec"
+        ],
+        "/bin/opkg list-upgradable": [
+          "exec"
+        ],
+        "/bin/opkg upgrade untangled": [
+          "exec"
+        ],
+        "/bin/opkg upgrade untangled-full": [
+          "exec"
+        ],
+        "/bin/opkg upgrade untangled-mesh": [
+          "exec"
+        ],
+        "/usr/bin/apk update": [
+          "exec"
+        ],
+        "/usr/bin/apk list --upgradable": [
+          "exec"
+        ],
+        "/usr/bin/apk add --upgrade untangled": [
+          "exec"
+        ],
+        "/usr/bin/apk add --upgrade untangled-full": [
+          "exec"
+        ],
+        "/usr/bin/apk add --upgrade untangled-mesh": [
           "exec"
         ]
       },

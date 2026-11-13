@@ -4,6 +4,10 @@
 # (cert/key paths come from the stock /etc/config/uhttpd). We only turn on the
 # HTTP->HTTPS redirect when an HTTPS listener is configured, so a box without
 # one can never be locked out of the plain-HTTP UI.
+# Once only. This script runs again on every upgrade; without the marker it
+# would switch the redirect back on for someone who turned it off, and restart
+# uhttpd in the middle of an update started from the web interface.
+[ "$(uci -q get untangled.https.configured)" = 1 ] && exit 0
 [ -n "$(uci -q get uhttpd.main.listen_https)" ] || exit 0
 # ...and only when a TLS library is actually installed (any libustream-*
 # variant ships this file). Without it uhttpd cannot serve HTTPS, and a redirect
@@ -11,5 +15,9 @@
 [ -e /lib/libustream-ssl.so ] || exit 0
 uci -q set uhttpd.main.redirect_https='1'
 uci -q commit uhttpd
+touch /etc/config/untangled 2>/dev/null
+uci -q set untangled.https=state
+uci -q set untangled.https.configured='1'
+uci -q commit untangled
 /etc/init.d/uhttpd restart 2>/dev/null
 exit 0

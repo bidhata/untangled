@@ -10,7 +10,7 @@ Built for the whole household, with every advanced knob still one click away.
 [![Website](https://img.shields.io/badge/website-bidhata.github.io%2Funtangled-0fb5c4)](https://bidhata.github.io/untangled/)
 [![Live demo](https://img.shields.io/badge/live%20demo-try%20it%20in%20your%20browser-0a8c99)](https://bidhata.github.io/untangled/demo/)
 ![OpenWRT](https://img.shields.io/badge/OpenWRT-23.05%2B%20stable%20%2B%20snapshot-00B5E2)
-![UI bundle](https://img.shields.io/badge/UI%20bundle-~96%20KB%20gz-2ea44f)
+![UI bundle](https://img.shields.io/badge/UI%20bundle-~103%20KB%20gz-2ea44f)
 ![Built with Svelte 5](https://img.shields.io/badge/built%20with-Svelte%205-FF3E00)
 ![License](https://img.shields.io/badge/license-GPL--2.0--or--later-blue)
 ![status](https://img.shields.io/badge/status-beta-orange)
@@ -98,6 +98,17 @@ Prefer a file? Every release attaches raw `.ipk` (stable) and `.apk` (snapshot) 
 
 > **No router handy?** [Click through the live demo](https://bidhata.github.io/untangled/demo/) for the full UI with sample data, in your browser.
 
+### Updating
+
+Open **System → Software** and press **Check for updates**. If the feed has a newer UnTangled, **Update now** installs it and reloads the page; your router settings are not touched. This needs the feed from the install steps above and a router that is online. It works from version 0.1.17 on, so an older install needs one last update from the command line:
+
+```sh
+opkg update && opkg upgrade untangled untangled-full untangled-mesh   # stable (list only the ones you installed)
+apk update && apk add --upgrade untangled-full                         # snapshot
+```
+
+If the page looks unchanged after a command-line upgrade from 0.1.16 or older, reload it once with Ctrl+Shift+R; newer versions make the browser notice by themselves.
+
 ### Coming from a Jio AirFiber router?
 
 If you installed OpenWrt on a **Jio IDU (JIDU)** router — any of the AX6000 models (6101, 6201, 6401, 6601, 6701 on MediaTek, or 6111, 6411, 6611, 6811, 6911 on Qualcomm) — UnTangled installs the same way as above. A few things to know:
@@ -119,7 +130,7 @@ UnTangled is an **OpenWRT** interface. It does not run on stock vendor firmware,
 stable line are both fine, as is snapshot), on **any CPU architecture** (the UI
 package is `PKGARCH:=all`), with room for its dependencies: `uhttpd`,
 `uhttpd-mod-ubus`, `rpcd`, `rpcd-mod-file`, `rpcd-mod-luci`. The UI itself is
-~96 KB gzipped and runs in your browser, so it adds little to router RAM.
+~103 KB gzipped and runs in your browser, so it adds little to router RAM.
 
 **You'll want ≈ 8 MB+ of free flash.** On very small devices (the old 4/32 MB class) the base dependencies may not fit. That's a device limitation, not an UnTangled one.
 
@@ -139,7 +150,7 @@ package is `PKGARCH:=all`), with room for its dependencies: `uhttpd`,
 
 - **Made for everyone.** Task-based flows and a visual Network Map for non-technical users; full depth, a command palette and "Advanced details" disclosures for the technical ones. One UI, no compromise.
 - **Hard to lock yourself out.** Connectivity-risky changes (Wireless, WAN, LAN, Firewall, DMZ) apply with an auto-rollback timer. If a change would cut you off, the router quietly reverts it.
-- **Tiny, fast, private.** The whole UI is around 96 KB gzipped, versus LuCI's megabytes. System fonts, no CDNs, no telemetry, no cloud account. The router never needs the internet to serve it.
+- **Tiny, fast, private.** The whole UI is around 103 KB gzipped, versus LuCI's megabytes. System fonts, no CDNs, no telemetry, no cloud account. The router never needs the internet to serve it.
 - **Help where you need it.** A `?` beside each setting explains it in a sentence, so there's no wall of jargon.
 - **Mesh Wi-Fi the easy way.** One Wi-Fi name across routers with 802.11r/k/v roaming, set up like a consumer mesh system.
 - **Light and dark themes.** A clean light theme by default, a Merlin-style dark theme one click away.
@@ -184,7 +195,7 @@ An honest comparison. LuCI is excellent and complete; UnTangled is the friendlie
 | Visual Network Map & device cards | ✅ | — |
 | Mesh Wi-Fi setup | ✅ guided, consumer-mesh style | manual, per package |
 | Lock-out protection on risky changes | ✅ auto-rollback timer | apply-with-rollback (manual) |
-| UI size | ✅ ~96 KB gzipped | several MB |
+| UI size | ✅ ~103 KB gzipped | several MB |
 | Feature completeness & maturity | beta, growing fast | ✅ mature, exhaustive |
 | Coexist on the same router | ✅ runs at `/untangled/`, never modifies LuCI | |
 

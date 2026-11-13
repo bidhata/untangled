@@ -19,6 +19,14 @@ decided entirely by the rpcd ACL the package installs:
   rpcd matches the resolved executable and then the full command line, so
   `sh -c`, `../` traversal and flag injection into the ping plugin are all
   rejected with "Access denied".
+- **Updating UnTangled itself**: the Software screen can refresh the package
+  lists and upgrade the three UnTangled packages, and nothing else. The grants
+  are the exact command lines `opkg update`, `opkg list-upgradable`,
+  `opkg upgrade untangled` / `untangled-full` / `untangled-mesh` (and the apk
+  equivalents, `apk add --upgrade <name>`). A second package name, another
+  package, or any option (`--force-…`, `--allow-untrusted`) is rejected. The
+  packages still come from the signed feed, which the router verifies as it
+  does on the command line. There is no general install or remove.
 - **rpc-sys**: only `upgrade_test`, `upgrade_start`, `upgrade_clean`
   (firmware flashing). `factory` reset is not granted.
 - **cgi-io**: `upload` (firmware image / backup restore to fixed `/tmp`

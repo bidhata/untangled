@@ -6,6 +6,15 @@ EOF
 uci -q commit uhttpd
 /etc/init.d/uhttpd reload 2>/dev/null
 
+# Make browsers notice an upgrade. Package files all carry the SDK's fixed build
+# date, opkg overwrites index.html in place (same inode) and its size never
+# changes (the hashed asset names have a fixed length), so uhttpd's ETag and
+# Last-Modified were IDENTICAL across versions: after an upgrade a browser got
+# "304 Not Modified" and kept running the old interface from its cache. This
+# script runs on every install and upgrade, so stamp the un-hashed files now.
+touch /www/untangled/index.html /www/untangled-home.html 2>/dev/null
+touch /www/untangled/plugins/index.json /www/untangled/plugins/*/*.js 2>/dev/null
+
 # rpcd ACL groups (untangled, untangled-readonly) are installed under
 # /usr/share/rpcd/acl.d/. Assign them to a login in /etc/config/rpcd, e.g.:
 #   config login
