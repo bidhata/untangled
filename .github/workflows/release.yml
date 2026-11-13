@@ -52,16 +52,16 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           # Full history so manual (workflow_dispatch) runs can read the latest
           # release tag for the package version — see "Determine package version".
           fetch-depth: 0
 
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - name: Install dependencies
@@ -172,7 +172,7 @@ jobs:
           fi
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: untangled-${{ matrix.fmt }}
           path: out
@@ -185,7 +185,7 @@ jobs:
     if: github.ref_type == 'tag'
     steps:
       - name: Download all built packages
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           path: dist-packages
           merge-multiple: true
@@ -258,10 +258,10 @@ jobs:
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - name: Checkout (for public keys + site page)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Download built feeds
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           path: dist-packages
           merge-multiple: true
@@ -302,13 +302,13 @@ jobs:
       # rule for tags matching `v*` under Settings -> Environments ->
       # github-pages. Then re-run this job (or push the next tag).
       - name: Configure Pages
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@v6
 
       - name: Upload site
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: _site
 
       - name: Deploy
         id: deploy
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
