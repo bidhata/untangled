@@ -84,7 +84,7 @@ One ACL file, two groups: `untangled` (admin) and `untangled-readonly`. Admin ha
 
 | Screen | ubus / source |
 |---|---|
-| Network Map, Devices | `system board/info`, `network.interface dump`, `network.device status`, `luci-rpc getHostHints` + `getDHCPLeases`; Wi-Fi band and signal from `hostapd.<ifname> get_clients`, falling back to `iwinfo assoclist`; reservations and blocks in `uci dhcp`/`firewall`; Wake-on-LAN via `etherwake` |
+| Network Map, Devices | `system board/info`, CPU usage from `/proc/stat`, `network.interface dump`, `network.device status`, `luci-rpc getHostHints` + `getDHCPLeases`; Wi-Fi band and signal from `hostapd.<ifname> get_clients`, falling back to `iwinfo assoclist`; reservations and blocks in `uci dhcp`/`firewall`; Wake-on-LAN via `etherwake` |
 | Traffic Monitor | `network.device status` counters polled at 1 s |
 | Usage History | `vnstat --json`, `nlbw` (each degrades independently) |
 | Wireless, Guest | `uci wireless` (+ `network`, `dhcp`, `firewall` for guest provisioning), `network.wireless status` |
