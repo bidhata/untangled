@@ -26,7 +26,7 @@
     const path = state.smb.path || defPath;
     if (state.smb.enabled && !shareablePath(path, state.mounts)) { toast(NEED_DRIVE); return; }
     busy = true;
-    try { await setSmb(state.smb.enabled, path, state.smb.id); toast(state.smb.enabled ? 'File sharing on' : 'File sharing off'); await load(); }
+    try { await setSmb(state.smb.enabled, path, state.smb.id, state.smb.server); toast(state.smb.enabled ? 'File sharing on' : 'File sharing off'); await load(); }
     catch { toast('Could not update file sharing'); }
     finally { busy = false; }
   }

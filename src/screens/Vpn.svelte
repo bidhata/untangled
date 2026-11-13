@@ -4,7 +4,7 @@
   import Icon from '../components/Icon.svelte';
   import {
     loadVpn, setWgEnabled, addPeer, deletePeer,
-    setOvpnEnabled, deleteOvpn, addOvpnClient, addWgClient,
+    setOvpnEnabled, deleteOvpn, addOvpnClient, addWgClient, deleteWgClient,
     type VpnState, type WgIface
   } from '../lib/vpn';
   import { toast } from '../lib/toast';
@@ -134,7 +134,7 @@
         <span class="dn"><b>{c.name}</b><small>{c.sub}</small></span>
         <label class="toggle"><input type="checkbox" checked={c.enabled}
           on:change={(e) => wrap(() => c.kind === 'wg' ? setWgEnabled(c.id, e.currentTarget.checked) : setOvpnEnabled(c.id, e.currentTarget.checked), e.currentTarget.checked ? 'Connected' : 'Disconnected')} disabled={busy} /><span class="track"></span><span class="knob"></span></label>
-        <button class="btn" style="padding:6px 12px;margin-left:8px" on:click={() => wrap(() => c.kind === 'wg' ? deletePeer(c.id) : deleteOvpn(c.id), 'Removed')} disabled={busy}>Remove</button>
+        <button class="btn" style="padding:6px 12px;margin-left:8px" on:click={() => wrap(() => c.kind === 'wg' ? deleteWgClient(c.id) : deleteOvpn(c.id), 'Removed')} disabled={busy}>Remove</button>
       </div>
     {/each}
     {#if !clientWg.length && !clientOvpn.length}

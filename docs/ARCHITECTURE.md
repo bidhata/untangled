@@ -88,7 +88,7 @@ One ACL file, two groups: `untangled` (admin) and `untangled-readonly`. Admin ha
 | Traffic Monitor | `network.device status` counters polled at 1 s |
 | Usage History | `vnstat --json`, `nlbw` (each degrades independently) |
 | Wireless, Guest | `uci wireless` (+ `network`, `dhcp`, `firewall` for guest provisioning), `network.wireless status` |
-| Extend Wi-Fi | `iwinfo scan`; joins as a client (`sta`) on `wwan`; no relayd bridge |
+| Extend Wi-Fi | `iwinfo scan` on every radio; joins as a client (`sta`) on the radio that heard the network, `wwan` (DHCP) added to the `wan` firewall zone (routed/NAT, no relayd bridge); applied with rollback-confirm |
 | Parental Controls | fw4 time rules by MAC in `uci firewall` |
 | Network Protection | `uci adblock`, `uci banip` enable flags; link to AdGuard Home when present |
 | Internet (WAN), LAN, IPv6 | `uci network`, `uci dhcp`; WAN protocols dhcp / pppoe / static |

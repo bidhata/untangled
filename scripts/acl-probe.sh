@@ -39,6 +39,8 @@ expect_ubus() { # expect_ubus <ALLOW|DENY> <sid> <obj> <method>
 SID=$(login ut); RO=$(login ro); echo "admin sid=$SID  readonly sid=$RO"
 echo "[admin: things the UI does]"
 expect ALLOW "exec /etc/init.d/cron restart"            $SID file exec '{"command":"/etc/init.d/cron","params":["restart"]}'
+expect ALLOW "exec /etc/init.d/samba4 reload (absent -> NOT_FOUND ok)" $SID file exec '{"command":"/etc/init.d/samba4","params":["reload"]}'
+expect ALLOW "uci revert (discard a failed save)"       $SID uci revert '{"config":"system"}'
 expect ALLOW "exec bare sysupgrade -b (PATH lookup)"     $SID file exec '{"command":"sysupgrade","params":["-b","/tmp/untangled-backup.tar.gz"]}'
 expect ALLOW "exec rm -f backup"                         $SID file exec '{"command":"rm","params":["-f","/tmp/untangled-backup.tar.gz"]}'
 expect ALLOW "exec ping plugin with host target"         $SID file exec '{"command":"ping","params":["-c","3","-w","5","127.0.0.1"]}'
@@ -52,6 +54,7 @@ expect ALLOW "uci get network"                           $SID uci get '{"config"
 echo "[admin: things an attacker would try]"
 expect DENY  "exec /bin/sh -c id"                        $SID file exec '{"command":"/bin/sh","params":["-c","id"]}'
 expect DENY  "exec sh via PATH"                          $SID file exec '{"command":"sh","params":["-c","id"]}'
+expect DENY  "exec /etc/init.d/samba4 stop (not granted)"     $SID file exec '{"command":"/etc/init.d/samba4","params":["stop"]}'
 expect DENY  "exec /etc/init.d/dropbear stop"            $SID file exec '{"command":"/etc/init.d/dropbear","params":["stop"]}'
 expect DENY  "exec /sbin/sysupgrade -n /tmp/evil.bin"    $SID file exec '{"command":"sysupgrade","params":["-n","/tmp/evil.bin"]}'
 expect DENY  "exec ping with flag-injection target"      $SID file exec '{"command":"ping","params":["-c","3","-w","5","-f"]}'

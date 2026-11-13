@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import Help from '../components/Help.svelte';
   import { loadFirewall, saveZone, loadRules, addRule, saveRule, deleteRule, type FwZone, type FwForward, type FwRule, type Policy } from '../lib/firewall';
+  import { isIpv4, isPortOrRange } from '../lib/validate';
   import { toast } from '../lib/toast';
   import { startRollbackConfirm } from '../lib/confirm';
 
@@ -58,6 +59,10 @@
 
   async function saveDraft() {
     if (!draft || !draft.name.trim()) { toast('Give the rule a name'); return; }
+    const ports = (v: string) => v.trim().split(/\s+/).filter(Boolean);
+    if ([...ports(draft.destPort), ...ports(draft.srcPort)].some((p) => !isPortOrRange(p))) { toast('Ports are numbers from 1 to 65535, or a range like 5000-5010'); return; }
+    if (draft.srcIp && !isIpv4(draft.srcIp.split('/')[0])) { toast('The source address must be an IP address'); return; }
+    if (draft.srcMac && !/^([0-9a-f]{2}:){5}[0-9a-f]{2}$/i.test(draft.srcMac.trim())) { toast('The device (MAC) address looks like AA:BB:CC:DD:EE:FF'); return; }
     busy = true;
     try { await addRule(draft); draft = null; toast('Rule added'); await load(); }
     catch { toast('Could not add the rule'); }

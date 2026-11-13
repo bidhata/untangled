@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import Help from '../components/Help.svelte';
   import { loadLan, saveLan, type LanCfg } from '../lib/lan';
+  import { isIpv4, isNetmask, isIntIn, isLeaseTime } from '../lib/validate';
   import { toast } from '../lib/toast';
   import { startRollbackConfirm } from '../lib/confirm';
 
@@ -20,8 +21,21 @@
   onMount(load);
   $: dirty = cfg ? JSON.stringify(cfg) !== orig : false;
 
+  function problem(c: LanCfg): string {
+    if (!isIpv4(c.ipaddr)) return 'Enter a valid router address (e.g. 192.168.1.1)';
+    if (!isNetmask(c.netmask)) return 'Enter a valid subnet mask (e.g. 255.255.255.0)';
+    if (c.dhcp) {
+      if (!isIntIn(c.start, 1, 65534)) return 'The first DHCP address must be a number (e.g. 100)';
+      if (!isIntIn(c.limit, 1, 65534)) return 'The number of DHCP addresses must be a number (e.g. 150)';
+      if (!isLeaseTime(c.leasetime)) return 'Lease time looks like 12h, 30m or 7d';
+    }
+    return '';
+  }
   async function apply() {
-    if (!cfg) return; busy = true;
+    if (!cfg) return;
+    const bad = problem(cfg);
+    if (bad) { toast(bad); return; }
+    busy = true;
     try {
       await saveLan(cfg);
       const snap = JSON.stringify(cfg);

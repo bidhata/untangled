@@ -4,6 +4,7 @@
   import Icon from '../components/Icon.svelte';
   import { loadDmz, setDmz, clearDmz, type DmzState } from '../lib/firewall';
   import { getClients, type Client } from '../lib/net';
+  import { isIpv4 } from '../lib/validate';
   import { toast } from '../lib/toast';
   import { startRollbackConfirm } from '../lib/confirm';
 
@@ -29,7 +30,7 @@
   onMount(load);
 
   async function enable() {
-    if (!host) { toast('Choose a device or enter an IP first'); return; }
+    if (!isIpv4(host)) { toast('Choose a device or enter its IP address (e.g. 192.168.1.50)'); return; }
     busy = true;
     try {
       await setDmz(host);

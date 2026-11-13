@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import Help from '../components/Help.svelte';
   import { loadWan, saveWan, type WanCfg } from '../lib/wan';
+  import { isIpv4, isIpv6, isNetmask } from '../lib/validate';
   import { toast } from '../lib/toast';
   import { startRollbackConfirm } from '../lib/confirm';
 
@@ -20,8 +21,24 @@
   onMount(load);
   $: dirty = cfg ? JSON.stringify(cfg) !== orig : false;
 
+  function problem(c: WanCfg): string {
+    if (c.proto === 'static') {
+      if (!isIpv4(c.ipaddr)) return 'Enter a valid IP address from your provider';
+      if (!isNetmask(c.netmask)) return 'Enter a valid subnet mask (e.g. 255.255.255.0)';
+      if (!isIpv4(c.gateway)) return 'Enter a valid gateway address';
+    }
+    if (c.proto === 'pppoe' && !c.username.trim()) return 'Enter the PPPoE username from your provider';
+    if (!c.peerdns) {
+      const bad = c.dns.trim().split(/\s+/).filter(Boolean).find((d) => !isIpv4(d) && !isIpv6(d));
+      if (bad) return `"${bad}" is not a valid DNS server address`;
+    }
+    return '';
+  }
   async function apply() {
-    if (!cfg) return; busy = true;
+    if (!cfg) return;
+    const bad = problem(cfg);
+    if (bad) { toast(bad); return; }
+    busy = true;
     try {
       await saveWan(cfg);
       const snap = JSON.stringify(cfg);

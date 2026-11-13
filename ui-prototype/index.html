@@ -1492,7 +1492,7 @@ function renderExtend(){
         <div class="fn"><div class="devicon"><svg><use href="#i-clients"/></svg></div>Your devices</div>
       </div>
       <div style="text-align:center"><button class="btn" id="extRedo">Extend a different network</button></div>
-      <details class="adv"><summary>Advanced details</summary><div class="advb">UnTangled joined <span class="mono">${ext.net.ssid}</span> as a Wi-Fi client on <span class="mono">phy0</span>, then set up a relay bridge (<span class="mono">relayd</span>) so your wired and wireless devices share that same network — no second Wi-Fi name, no separate subnet to manage. If the upstream router supports WDS, UnTangled uses a true bridge instead. You didn't have to choose — UnTangled picked the method that works.</div></details>`;
+      <details class="adv"><summary>Advanced details</summary><div class="advb">UnTangled joined <span class="mono">${ext.net.ssid}</span> as a Wi-Fi client on the radio that heard it, on a <span class="mono">wwan</span> network added to the <span class="mono">wan</span> firewall zone. Everything connected to this router goes online through that network by NAT, on its own subnet. The change is applied with a rollback timer: if you can't confirm it, the previous settings come back.</div></details>`;
     $("extRedo").addEventListener("click",()=>{ext.step="scan";ext.net=null;renderExtend();});
   }
 }

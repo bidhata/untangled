@@ -96,6 +96,16 @@ export async function saveDualWan(mode: DualMode, primary: string, backup: strin
       await uciDelete('mwan3', name).catch(() => {});
       await uciAdd('mwan3', 'interface', name, ifaceSection());
     }
+    // mwan3 only manages an interface whose network section carries its own
+    // route metric (it needs both default routes present side by side); without
+    // one it logs "no metric" and ignores the interface. Keep existing distinct
+    // metrics, otherwise assign primary 10 / backup 20.
+    const net = ((await uciGet('network')) as any)?.values ?? {};
+    const mp = text(net[primary]?.metric), mb = text(net[backup]?.metric);
+    if (!mp || !mb || mp === mb) {
+      await uciSet('network', primary, { metric: '10' });
+      await uciSet('network', backup, { metric: '20' });
+    }
     const pm = `${primary}_m`, bm = `${backup}_m`;
     await uciAdd('mwan3', 'member', pm, { interface: primary, metric: '1', weight: '3' });
     await uciAdd('mwan3', 'member', bm, {

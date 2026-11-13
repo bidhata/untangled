@@ -2,7 +2,8 @@
 // a SERVER role (let devices in) and a CLIENT role (dial out to a provider).
 //   WireGuard  -> /etc/config/network  (proto 'wireguard' + wireguard_<iface> peers)
 //   OpenVPN    -> /etc/config/openvpn  (one section per instance; .ovpn via file 'config')
-import { call, uciSet, uciAdd, uciDelete, uciApply } from './ubus';
+import { call, uciSet, uciAdd, uciDelete, uciApply, firewallApply } from './ubus';
+import { stageWanZone } from './firewall';
 
 const truthy = (v: unknown) => v === '1' || v === 1 || v === true;
 function toArr(v: unknown): string[] {
@@ -122,5 +123,21 @@ export async function addWgClient(name: string, wgQuick: string): Promise<void> 
     route_allowed_ips: '1',
     persistent_keepalive: '25'
   });
-  await uciApply();
+  // Without a firewall zone the tunnel is up but LAN traffic into it is
+  // rejected, so a full-tunnel (0.0.0.0/0) config would take every device
+  // offline. Treat it like any other uplink: masqueraded, forwardable from lan.
+  await stageWanZone(ifn, true);
+  await firewallApply();
+}
+
+/** Remove a WireGuard client: its interface, its peer sections and its firewall-zone entry. */
+export async function deleteWgClient(id: string): Promise<void> {
+  const net = await call<any>('uci', 'get', { config: 'network' });
+  const values = net?.values ?? net ?? {};
+  for (const [sid, s] of Object.entries<any>(values)) {
+    if (s?.['.type'] === `wireguard_${id}`) await uciDelete('network', sid);
+  }
+  await uciDelete('network', id);
+  await stageWanZone(id, false);
+  await firewallApply();
 }

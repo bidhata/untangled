@@ -19,7 +19,12 @@
     return getComputedStyle(document.documentElement).getPropertyValue(v).trim();
   }
 
+  let sampling = false;
   async function sample() {
+    // On a slow link a read can outlast the 1 s tick; overlapping samples would
+    // compute rates from the wrong pair of counters and draw spikes.
+    if (sampling) return;
+    sampling = true;
     try {
       if (!wanDev) wanDev = (await getWan()).device || '';
       const devs = await getDevices();
@@ -51,6 +56,8 @@
       draw();
     } catch {
       error = 'Could not read traffic counters from the router.';
+    } finally {
+      sampling = false;
     }
   }
 

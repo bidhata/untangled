@@ -175,6 +175,15 @@
         "/etc/init.d/ksmbd enable": [
           "exec"
         ],
+        "/etc/init.d/samba4 restart": [
+          "exec"
+        ],
+        "/etc/init.d/samba4 reload": [
+          "exec"
+        ],
+        "/etc/init.d/samba4 enable": [
+          "exec"
+        ],
         "/etc/init.d/minidlna restart": [
           "exec"
         ],

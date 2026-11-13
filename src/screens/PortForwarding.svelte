@@ -6,6 +6,7 @@
     loadPortForwards, addPortForward, savePortForward, deletePortForward, type PortFwd
   } from '../lib/firewall';
   import { getWan, getClients, type Client } from '../lib/net';
+  import { isIpv4, isPortOrRange } from '../lib/validate';
   import { toast } from '../lib/toast';
 
   let rules: PortFwd[] = [];
@@ -55,7 +56,8 @@
 
   async function add() {
     if (!destIp) { toast('Choose a device'); return; }
-    if (!port) { toast('Enter a port'); return; }
+    if (!isPortOrRange(port)) { toast('Enter a port from 1 to 65535, or a range like 5000-5010'); return; }
+    if (!isIpv4(destIp)) { toast('The device address must be an IP address (e.g. 192.168.1.50)'); return; }
     busy = true;
     try {
       await addPortForward({ name: name || 'Service', proto, port, destIp });

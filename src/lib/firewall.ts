@@ -54,6 +54,26 @@ export async function saveZone(z: FwZone): Promise<void> {
   await firewallApply(true);
 }
 
+/**
+ * Stage adding/removing a network on the `wan` firewall zone. An extra uplink
+ * (Wi-Fi client `wwan`, a VPN client) only carries LAN traffic once it is in a
+ * masqueraded zone that `lan` may forward to; outside any zone the router
+ * rejects that traffic. Staged only: the caller applies. Returns false when
+ * there is no zone named `wan` (nothing staged).
+ */
+export async function stageWanZone(iface: string, member: boolean): Promise<boolean> {
+  const r = await call<any>('uci', 'get', { config: 'firewall' });
+  const values = r?.values ?? r ?? {};
+  for (const [id, s] of Object.entries<any>(values)) {
+    if (s?.['.type'] !== 'zone' || s.name !== 'wan') continue;
+    const cur = toArr(s.network);
+    const next = member ? [...new Set([...cur, iface])] : cur.filter((n) => n !== iface);
+    if (next.length !== cur.length) await uciSet('firewall', id, { network: next });
+    return true;
+  }
+  return false;
+}
+
 // ---- DMZ (a full-cone DNAT of all WAN inbound to one host) -----------------
 export interface DmzState { enabled: boolean; host: string; redirectId: string | null; }
 

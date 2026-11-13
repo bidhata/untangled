@@ -10,7 +10,16 @@ export interface ShareSvc {
   enabled: boolean;
   path: string;
   id: string | null;   // managed section id
+  server?: SmbServer;  // which SMB server owns the share (SMB only)
 }
+
+// The two OpenWRT SMB servers differ only in names: uci config, share section
+// type and init script.
+export type SmbServer = 'ksmbd' | 'samba4';
+const SMB: Record<SmbServer, { config: string; type: string; init: string }> = {
+  ksmbd: { config: 'ksmbd', type: 'share', init: '/etc/init.d/ksmbd' },
+  samba4: { config: 'samba4', type: 'sambashare', init: '/etc/init.d/samba4' }
+};
 
 export interface UsbState {
   mounts: UsbMount[];
@@ -48,20 +57,17 @@ async function readMounts(): Promise<UsbMount[]> {
   return out;
 }
 
-// Both OpenWRT SMB servers use a `config share` section with name/path, so one
-// reader covers ksmbd and samba4 (config `samba`). We write via ksmbd, so a
-// detected samba4 share counts as installed/enabled but keeps its own id/config.
-async function loadSmbFrom(config: string): Promise<ShareSvc | null> {
+async function loadSmbFrom(server: SmbServer): Promise<ShareSvc | null> {
   try {
-    const r = await uciGet(config);
+    const r = await uciGet(SMB[server].config);
     const v = (r as any)?.values ?? r ?? {};
     let id: string | null = null, path = '', enabled = false;
     for (const [sid, s] of Object.entries<any>(v)) {
-      if (s?.['.type'] !== 'share') continue;
+      if (s?.['.type'] !== SMB[server].type) continue;
       if (text(s.name) === SHARE_NAME) { id = sid; path = text(s.path); enabled = true; break; }
       if (!id) { id = sid; path = text(s.path); enabled = true; }
     }
-    return { installed: true, enabled, path, id };
+    return { installed: true, enabled, path, id, server };
   } catch {
     return null;
   }
@@ -69,7 +75,7 @@ async function loadSmbFrom(config: string): Promise<ShareSvc | null> {
 
 async function loadSmb(): Promise<ShareSvc> {
   return (await loadSmbFrom('ksmbd'))
-    ?? (await loadSmbFrom('samba'))
+    ?? (await loadSmbFrom('samba4'))
     ?? { installed: false, enabled: false, path: '', id: null };
 }
 
@@ -92,17 +98,18 @@ export async function loadUsb(): Promise<UsbState> {
   return { mounts, smb, dlna };
 }
 
-export async function setSmb(on: boolean, path: string, id: string | null): Promise<void> {
+export async function setSmb(on: boolean, path: string, id: string | null, server: SmbServer = 'ksmbd'): Promise<void> {
+  const { config, type, init } = SMB[server];
   if (on) {
     const values = { name: SHARE_NAME, path, read_only: 'no', guest_ok: 'yes', browseable: 'yes', create_mask: '0666', dir_mask: '0777' };
-    if (id) await uciSet('ksmbd', id, values);
-    else await uciAdd('ksmbd', 'share', undefined, values);
+    if (id) await uciSet(config, id, values);
+    else await uciAdd(config, type, undefined, values);
   } else if (id) {
-    await uciDelete('ksmbd', id);
+    await uciDelete(config, id);
   }
   await uciApply();
-  await call('file', 'exec', { command: '/etc/init.d/ksmbd', params: [on ? 'restart' : 'reload'] }).catch(() => {});
-  if (on) await call('file', 'exec', { command: '/etc/init.d/ksmbd', params: ['enable'] }).catch(() => {});
+  await call('file', 'exec', { command: init, params: [on ? 'restart' : 'reload'] }).catch(() => {});
+  if (on) await call('file', 'exec', { command: init, params: ['enable'] }).catch(() => {});
 }
 
 export async function setDlna(on: boolean, path: string, id: string | null): Promise<void> {
