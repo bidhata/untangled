@@ -6,8 +6,8 @@ package feed. The release workflow publishes them to
 
 | File | Type | Verifies |
 |---|---|---|
-| `untangled.pub` | usign (ed25519) public key | the **opkg** feed index (`Packages.sig`) — stable 23.05 / 24.10 |
-| `untangled.pem` | EC P-256 (prime256v1) public key, PEM | **apk** packages and `packages.adb` — snapshot |
+| `untangled.pub` | usign (ed25519) public key | the **opkg** feed index (`Packages.sig`) — 23.05 / 24.10 |
+| `untangled.pem` | EC P-256 (prime256v1) public key, PEM | **apk** packages and `packages.adb` — 25.12+ and snapshot |
 
 The **private** halves must never be committed. They live only in the
 repository's GitHub Actions Secrets, where the release workflow reads them:
