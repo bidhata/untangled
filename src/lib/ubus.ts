@@ -11,16 +11,17 @@ const NULL_SESSION = '00000000000000000000000000000000';
 import { MOCK_ENABLED, mockCall } from './mockUbus';
 import { session } from './stores';
 
-// The ubus session token. Persisted to sessionStorage so an in-tab reload or
-// an iOS/Safari/Firefox tab-discard-and-restore (which wipes JS memory) keeps
-// the user signed in; closing the tab still drops it. Router admin tokens are
-// short-lived server-side anyway (see login timeout below), so sessionStorage
-// is the right scope — not localStorage, which would outlive the tab.
+// The ubus session token. Persisted to localStorage so a reload, a new tab or
+// a browser restart skips the login screen while the session is still valid
+// on the router. The token only lives as long as rpcd keeps the session (see
+// the login timeout below), and signing out destroys it on the router and
+// removes it here. restoreSession() checks it on boot, so a stale token just
+// leads back to the login screen.
 const SESSION_KEY = 'untangled-session';
 
 function loadSession(): string {
   try {
-    const id = sessionStorage.getItem(SESSION_KEY);
+    const id = localStorage.getItem(SESSION_KEY);
     if (id && /^[0-9a-f]{32}$/.test(id)) return id;
   } catch { /* storage may be unavailable (private mode, etc.) */ }
   return NULL_SESSION;
@@ -32,8 +33,8 @@ let rpcId = 1;
 export function setSession(id: string) {
   sessionId = id;
   try {
-    if (id && id !== NULL_SESSION) sessionStorage.setItem(SESSION_KEY, id);
-    else sessionStorage.removeItem(SESSION_KEY);
+    if (id && id !== NULL_SESSION) localStorage.setItem(SESSION_KEY, id);
+    else localStorage.removeItem(SESSION_KEY);
   } catch { /* storage may be unavailable */ }
 }
 export function getSession() {

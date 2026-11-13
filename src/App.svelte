@@ -5,10 +5,10 @@
   import { session } from './lib/stores';
   import { restoreSession } from './lib/ubus';
 
-  // Restore a persisted session token (sessionStorage) on boot and revalidate
+  // Restore a persisted session token (localStorage) on boot and revalidate
   // it against the router before showing the Shell. This is what keeps the user
-  // signed in across in-tab reloads and iOS/Safari/Firefox tab-discard restores
-  // — without it, every reload lands on the login screen. While the probe runs
+  // signed in across reloads, new tabs and browser restarts while the router
+  // session is still valid — without it, every visit lands on the login screen. While the probe runs
   // we show nothing (a blank splash) so the login form never flashes for an
   // already-signed-in user.
   const booting = restoreSession().then((username) => {
