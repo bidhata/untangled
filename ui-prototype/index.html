@@ -125,7 +125,12 @@ button{font-family:inherit}
 .topo text{font-family:var(--font-body);fill:var(--ink-dim)}
 .topo .nbg{fill:var(--node-bg);stroke:var(--node-line);stroke-width:1.5;transition:.15s}
 .topo .nbg-router{fill:var(--router-bg);stroke:var(--router-ring);stroke-width:2.5;transition:.15s}
-.topo .pulse{stroke:var(--router-ring)}
+.topo .nbg.hub{stroke:var(--band,var(--node-line));stroke-width:2.5}
+.node:hover .nbg.hub,.node.sel .nbg.hub,.node:focus-visible .nbg.hub{stroke:var(--band,var(--accent));stroke-width:3.5}
+.tsearch{margin-left:auto;background:var(--panel-2);border:1px solid var(--line);border-radius:9px;color:var(--ink);font-size:12.5px;padding:7px 11px;width:min(260px,46vw);outline:none;font-family:inherit}
+.tsearch:focus{border-color:var(--accent)}
+.tsearch::placeholder{color:var(--muted)}
+.panel-h .tsearch + .sub{margin-left:12px}
 .topo .ilink{stroke:var(--topo-line)}
 .topo .router-ic{color:var(--router-ring)}
 .topo .inet-ic{color:var(--muted)}
@@ -161,6 +166,7 @@ button{font-family:inherit}
 .clients tr:last-child td{border-bottom:0}
 .clients tbody tr{cursor:pointer;transition:.12s}
 .clients tbody tr:hover{background:var(--panel-2)}
+.clients tbody tr.sel{background:var(--accent-soft)}
 .cname{display:flex;align-items:center;gap:11px}
 .cname .mi{width:34px;height:34px;border-radius:10px;background:var(--panel-2);display:grid;place-items:center;border:1px solid var(--line)}
 .cname .mi svg{width:17px;height:17px;color:var(--ink-dim)}
@@ -385,6 +391,7 @@ details.adv .advb{padding:0 15px 15px;font-size:12.5px;color:var(--muted);line-h
 <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></symbol>
 <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></symbol>
 <symbol id="i-github" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a10 10 0 00-3.16 19.49c.5.09.68-.22.68-.48l-.01-1.7c-2.78.6-3.37-1.34-3.37-1.34-.46-1.16-1.11-1.47-1.11-1.47-.9-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.9 1.52 2.34 1.08 2.91.83.09-.65.35-1.08.63-1.33-2.22-.25-4.56-1.11-4.56-4.94 0-1.09.39-1.98 1.03-2.68-.1-.26-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.02a9.5 9.5 0 015 0c1.91-1.29 2.75-1.02 2.75-1.02.55 1.38.2 2.39.1 2.65.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.69-4.57 4.94.36.31.68.92.68 1.85l-.01 2.74c0 .27.18.58.69.48A10 10 0 0012 2z"/></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
 <symbol id="i-cpu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="7" width="10" height="10" rx="1.5"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/></symbol>
 <symbol id="i-mem" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="10" rx="2"/><path d="M6 7V5M10 7V5M14 7V5M18 7V5M6 21v-2M18 21v-2M11 21v-2"/></symbol>
 <symbol id="i-temp" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13.5V5a2 2 0 114 0v8.5a4 4 0 11-4 0z"/></symbol>
@@ -479,17 +486,17 @@ details.adv .advb{padding:0 15px 15px;font-size:12.5px;color:var(--muted);line-h
     <section class="screen active" id="screen-map">
       <div class="page-head"><div><div class="breadcrumb">General</div><h1>Network Map</h1><p>Live view of your router, the internet connection, and every connected device.</p></div></div>
       <div class="tiles">
-        <div class="tile"><div class="k"><svg><use href="#i-wan"/></svg> Internet</div><div class="v" style="font-size:16px;margin-top:11px">Connected</div><div class="hint mono" style="margin-top:4px">203.0.113.42</div></div>
+        <div class="tile"><div class="k"><svg><use href="#i-wan"/></svg> Internet</div><div class="v" style="font-size:16px;margin-top:11px;color:var(--good)">Connected</div><div class="hint mono" style="margin-top:4px">203.0.113.42</div></div>
         <div class="tile"><div class="k"><svg><use href="#i-clients"/></svg> Clients</div><div class="v" id="tileClients">8 <small>online</small></div></div>
-        <div class="tile"><div class="k"><svg><use href="#i-cpu"/></svg> CPU</div><div class="v" id="tileCpu">14<small>%</small></div><div class="meter"><i id="barCpu" style="width:14%"></i></div></div>
+        <div class="tile"><div class="k"><svg><use href="#i-cpu"/></svg> Load (1m)</div><div class="v" id="tileLoad">0.42</div></div>
         <div class="tile"><div class="k"><svg><use href="#i-mem"/></svg> Memory</div><div class="v" id="tileMem">38<small>%</small></div><div class="meter"><i id="barMem" style="width:38%"></i></div></div>
-        <div class="tile"><div class="k"><svg><use href="#i-temp"/></svg> Temp</div><div class="v" id="tileTemp">54<small>°C</small></div></div>
+        <div class="tile"><div class="k"><svg><use href="#i-clock"/></svg> Uptime</div><div class="v" style="font-size:16px;margin-top:11px">6d 14h 9m</div></div>
       </div>
       <div class="grid map-grid">
         <div class="panel">
-          <div class="panel-h"><h2>Topology</h2><span class="sub">192.168.1.0/24</span></div>
+          <div class="panel-h"><h2>Topology</h2><span class="sub">eth1</span></div>
           <div class="mapwrap">
-            <svg class="topo" viewBox="0 0 800 430" id="topo" role="img" aria-label="Network topology diagram">
+            <svg class="topo" viewBox="0 0 800 470" id="topo" role="img" aria-label="Network topology">
               <g id="links"></g>
               <g class="node" data-id="internet" tabindex="0" role="button" aria-label="Internet">
                 <circle class="nbg" cx="400" cy="52" r="30"/>
@@ -497,7 +504,6 @@ details.adv .advb{padding:0 15px 15px;font-size:12.5px;color:var(--muted);line-h
                 <text x="400" y="100" text-anchor="middle" font-size="12">Internet</text>
               </g>
               <g class="node" data-id="router" tabindex="0" role="button" aria-label="Router">
-                <circle class="pulse" cx="400" cy="205" r="52" fill="none" stroke-opacity=".25" stroke-width="2"><animate attributeName="r" values="46;58;46" dur="3.5s" repeatCount="indefinite"/><animate attributeName="stroke-opacity" values=".4;0;.4" dur="3.5s" repeatCount="indefinite"/></circle>
                 <circle class="nbg-router" cx="400" cy="205" r="40"/>
                 <use class="router-ic" href="#d-router" x="378" y="183" width="44" height="44"/>
                 <text x="400" y="268" text-anchor="middle" font-size="12.5" font-weight="700">RT-AX88U</text>
@@ -508,7 +514,7 @@ details.adv .advb{padding:0 15px 15px;font-size:12.5px;color:var(--muted);line-h
               <span><i class="lg" style="background:var(--band5)"></i> 5 GHz</span>
               <span><i class="lg" style="background:var(--band24)"></i> 2.4 GHz</span>
               <span><i class="lg" style="background:var(--wired)"></i> Wired</span>
-              <span style="opacity:.8">Tap a device for details</span>
+              <span style="opacity:.8" id="topoHint">Tap a hub to expand</span>
             </div>
           </div>
         </div>
@@ -518,9 +524,9 @@ details.adv .advb{padding:0 15px 15px;font-size:12.5px;color:var(--muted);line-h
         </div>
       </div>
       <div class="panel" style="margin-top:18px">
-        <div class="panel-h"><h2>Connected Clients</h2><span class="sub" id="clientCount">8 devices</span></div>
+        <div class="panel-h"><h2>Connected Clients</h2><input class="tsearch" type="search" id="clientSearch" placeholder="Search name, IP, or MAC…" aria-label="Search connected clients"><span class="sub" id="clientCount">8 of 8 devices</span></div>
         <div style="overflow-x:auto"><table class="clients">
-          <thead><tr><th>Device</th><th>IP Address</th><th>Connection</th><th>Signal</th><th>Download</th></tr></thead>
+          <thead><tr><th>Device</th><th>IP Address</th><th>Connection</th><th>Signal</th></tr></thead>
           <tbody id="clientRows"></tbody>
         </table></div>
       </div>
@@ -1172,73 +1178,101 @@ const bandName={"5":"5 GHz","24":"2.4 GHz","wired":"Wired"};
 const bandStroke={"5":"#0fb5c4","24":"#f79009","wired":"#17b26a"};
 const bandClass={"5":"b5","24":"b24","wired":"bwired"};
 
-/* ---------- Topology ---------- */
+/* ---------- Topology (band hubs, as in the app) ---------- */
+// Devices are grouped by band into hubs so the map stays readable with any
+// number of clients; a hub expands to reveal its devices.
+const BAND_ORDER=["5","24","wired"];
+const TOPO={RX:400,Y:360,HUB_SPREAD:660,DEV_SPREAD:720,PER_ROW:8,ROW_GAP:92};
+let expandedBand=null, selectedId="router";
+function spreadX(i,n,spread){return n<=1?TOPO.RX:TOPO.RX-spread/2+(spread/(n-1))*i;}
 function buildTopology(){
-  const links=$("links"), nodes=$("clientNodes");
-  links.innerHTML=`<line class="link ilink" x1="400" y1="82" x2="400" y2="165" stroke-width="2.5"/>`;
-  nodes.innerHTML="";
-  const n=clients.length, spread=720, startX=400-spread/2, y=358;
-  clients.forEach((c,i)=>{
-    const x=n===1?400:startX+(spread/(n-1))*i;
-    links.insertAdjacentHTML("beforeend",`<path class="link" d="M400,245 C400,320 ${x},285 ${x},${y-30}" stroke="${bandStroke[c.band]}" stroke-width="2.5"/>`);
-    nodes.insertAdjacentHTML("beforeend",
-      `<g class="node" data-id="${c.id}" tabindex="0" role="button" aria-label="${c.name}">
-         <circle class="nbg" cx="${x}" cy="${y}" r="26"/>
-         <use href="#${c.type}" x="${x-14}" y="${y-14}" width="28" height="28" color="${bandStroke[c.band]}"/>
-         <text class="nlabel" x="${x}" y="${y+44}" text-anchor="middle" font-size="11">${c.name.split(' ')[0]}</text>
-       </g>`);
+  const links=$("links"), nodes=$("clientNodes"), Y=TOPO.Y;
+  const groups=BAND_ORDER.map(band=>({band,items:clients.filter(c=>c.band===band)})).filter(g=>g.items.length);
+  const items=expandedBand?clients.filter(c=>c.band===expandedBand):[];
+  const rows=Math.ceil(items.length/TOPO.PER_ROW)||0;
+  $("topo").setAttribute("viewBox","0 0 800 "+(470+(expandedBand?100+Math.max(0,rows-1)*TOPO.ROW_GAP:0)));
+  const hubX=i=>spreadX(i,groups.length,TOPO.HUB_SPREAD);
+  const devX=i=>{const row=Math.floor(i/TOPO.PER_ROW);return spreadX(i%TOPO.PER_ROW,Math.min(TOPO.PER_ROW,items.length-row*TOPO.PER_ROW),TOPO.DEV_SPREAD);};
+  const devY=i=>Y+150+Math.floor(i/TOPO.PER_ROW)*TOPO.ROW_GAP;
+  let l=`<line class="link ilink" x1="400" y1="82" x2="400" y2="165" stroke-width="2.5"/>`, n="";
+  groups.forEach((g,i)=>{
+    const x=hubX(i), col=bandStroke[g.band], on=expandedBand===g.band;
+    l+=`<path class="link" d="M400,245 C400,300 ${x},300 ${x},${Y-34}" stroke="${col}" stroke-width="2.5"/>`;
+    n+=`<g class="node${on?" sel":""}" data-hub="${g.band}" tabindex="0" role="button" aria-pressed="${on}" aria-label="${bandName[g.band]} — ${g.items.length} devices">
+         <circle class="nbg hub" cx="${x}" cy="${Y}" r="30" style="--band:${col}"/>
+         <text x="${x}" y="${Y+6}" text-anchor="middle" font-size="18" font-weight="700" style="fill:${col}">${g.items.length}</text>
+         <text class="nlabel" x="${x}" y="${Y+50}" text-anchor="middle" font-size="11">${bandName[g.band]}</text>
+       </g>`;
   });
+  const hx=expandedBand?hubX(groups.findIndex(g=>g.band===expandedBand)):0;
+  items.forEach((c,i)=>{
+    const x=devX(i), y=devY(i), col=bandStroke[c.band];
+    l+=`<path class="link" d="M${hx},${Y+34} C${hx},${Y+110} ${x},${y-70} ${x},${y-26}" stroke="${col}" stroke-width="2"/>`;
+    n+=`<g class="node" data-id="${c.id}" tabindex="0" role="button" aria-label="${c.name}">
+         <circle class="nbg" cx="${x}" cy="${y}" r="24"/>
+         <use href="#${c.type}" x="${x-13}" y="${y-13}" width="26" height="26" color="${col}"/>
+         <text class="nlabel" x="${x}" y="${y+40}" text-anchor="middle" font-size="10.5">${c.name.split(' ')[0]}</text>
+       </g>`;
+  });
+  links.innerHTML=l; nodes.innerHTML=n;
+  $("topoHint").textContent=expandedBand?"Tap a hub to collapse":"Tap a hub to expand";
   document.querySelectorAll("#topo .node").forEach(g=>{
-    const act=()=>selectDevice(g.dataset.id,g);
-    g.addEventListener("click",act);
-    g.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();act();}});
+    const act=g.dataset.hub
+      ? ()=>{expandedBand=expandedBand===g.dataset.hub?null:g.dataset.hub;buildTopology();const h=document.querySelector('#topo .node[data-hub="'+g.dataset.hub+'"]');if(h)h.focus({preventScroll:true});}
+      : ()=>selectDevice(g.dataset.id);
+    g.onclick=act;
+    g.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();act();}};
   });
+  markSelected();
 }
-function selectDevice(id,gEl){
-  document.querySelectorAll("#topo .node").forEach(n=>n.classList.remove("sel"));
+function markSelected(){
+  document.querySelectorAll("#topo .node[data-id]").forEach(n=>n.classList.toggle("sel",n.dataset.id===selectedId));
+  document.querySelectorAll("#clientRows tr[data-id]").forEach(r=>r.classList.toggle("sel",r.dataset.id===selectedId));
+}
+function selectDevice(id){
+  selectedId=id; markSelected();
   const body=$("detailBody"), title=$("detailTitle");
-  if(gEl) gEl.classList.add("sel"); else { const g=document.querySelector(`#topo .node[data-id="${id}"]`); if(g)g.classList.add("sel"); }
   if(id==="router"){ title.textContent="This Router";
-    body.innerHTML=`<div class="big"><div class="devicon"><svg><use href="#d-router"/></svg></div><div><b>RT-AX88U</b><div class="m">AX6000 · Wireless Router mode</div></div></div>
-      <div class="kv"><span class="l">Firmware</span><span class="r">UnTangled 1.0-beta</span></div>
-      <div class="kv"><span class="l">LAN IP</span><span class="r">192.168.1.1</span></div>
+    body.innerHTML=`<div class="big"><div class="devicon"><svg><use href="#d-router"/></svg></div><div><b>RT-AX88U</b><div class="m">UnTangled</div></div></div>
+      <div class="kv"><span class="l">Firmware</span><span class="r">OpenWrt 24.10.0</span></div>
       <div class="kv"><span class="l">WAN IP</span><span class="r">203.0.113.42</span></div>
-      <div class="kv"><span class="l">Uptime</span><span class="r">6d 14h 09m</span></div>
+      <div class="kv"><span class="l">Gateway</span><span class="r">203.0.113.1</span></div>
+      <div class="kv"><span class="l">Uptime</span><span class="r">6d 14h 9m</span></div>
       <div class="kv"><span class="l">Clients</span><span class="r">${clients.length} online</span></div>`; return; }
   if(id==="internet"){ title.textContent="Internet";
-    body.innerHTML=`<div class="big"><div class="devicon"><svg><use href="#d-cloud"/></svg></div><div><b>WAN · Connected</b><div class="m">DHCP · 1 Gbps fiber</div></div></div>
+    body.innerHTML=`<div class="big"><div class="devicon"><svg><use href="#d-cloud"/></svg></div><div><b>WAN · Connected</b><div class="m">dhcp</div></div></div>
       <div class="kv"><span class="l">Public IP</span><span class="r">203.0.113.42</span></div>
       <div class="kv"><span class="l">Gateway</span><span class="r">203.0.113.1</span></div>
       <div class="kv"><span class="l">DNS</span><span class="r">1.1.1.1 · 9.9.9.9</span></div>
-      <div class="kv"><span class="l">Latency</span><span class="r">8 ms</span></div>`; return; }
+      <div class="kv"><span class="l">Uptime</span><span class="r">6d 14h 8m</span></div>`; return; }
   const c=clients.find(x=>x.id===id); if(!c) return;
   title.textContent="Device";
   const bars=[1,2,3,4].map(nn=>`<i class="${nn<=c.sig?'on':''}" style="height:${nn*3+2}px"></i>`).join("");
-  body.innerHTML=`<div class="big"><div class="devicon"><svg><use href="#${c.type}"/></svg></div><div><b>${c.name}</b><div class="m">${c.vendor}</div></div></div>
+  body.innerHTML=`<div class="big"><div class="devicon"><svg><use href="#${c.type}"/></svg></div><div><b>${c.name}</b><div class="m mono">${c.mac}</div></div></div>
     <div class="kv"><span class="l">Connection</span><span class="r"><span class="bandchip ${bandClass[c.band]}">${bandName[c.band]}</span></span></div>
     <div class="kv"><span class="l">IP address</span><span class="r">${c.ip}</span></div>
-    <div class="kv"><span class="l">MAC</span><span class="r">${c.mac}</span></div>
-    <div class="kv"><span class="l">Signal</span><span class="r"><span class="sig">${bars}</span></span></div>
-    <div class="kv"><span class="l">Live download</span><span class="r">${c.down}</span></div>
-    <div class="kv"><span class="l">Today ↓ / ↑</span><span class="r">${c.dl} / ${c.ul}</span></div>
-    <div style="display:flex;gap:8px;margin-top:16px"><button class="btn" style="flex:1" onclick="toast('Blocked ${c.name} (simulated)')">Block</button><button class="btn" style="flex:1" onclick="toast('Prioritized ${c.name} (simulated)')">Prioritize</button></div>`;
+    <div class="kv"><span class="l">Signal</span><span class="r"><span class="sig">${bars}</span></span></div>`;
 }
 
-/* ---------- Client table ---------- */
+/* ---------- Client table (searchable) ---------- */
 function buildClientTable(){
-  const tb=$("clientRows"); tb.innerHTML="";
-  clients.forEach(c=>{
+  const tb=$("clientRows"), q=($("clientSearch").value||"").trim().toLowerCase(); tb.innerHTML="";
+  const list=q?clients.filter(c=>c.name.toLowerCase().includes(q)||c.ip.includes(q)||c.mac.toLowerCase().includes(q)):clients;
+  list.forEach(c=>{
     const bars=[1,2,3,4].map(nn=>`<i class="${nn<=c.sig?'on':''}" style="height:${nn*3+2}px"></i>`).join("");
-    const tr=document.createElement("tr");
+    const tr=document.createElement("tr"); tr.dataset.id=c.id;
     tr.innerHTML=`<td><div class="cname"><span class="mi"><svg><use href="#${c.type}"/></svg></span><span><b>${c.name}</b><small>${c.mac}</small></span></div></td>
       <td class="mono">${c.ip}</td><td><span class="bandchip ${bandClass[c.band]}">${bandName[c.band]}</span></td>
-      <td><span class="sig">${bars}</span></td><td class="mono">${c.down}</td>`;
-    tr.addEventListener("click",()=>{navTo("map");selectDevice(c.id);$("detailPanel").scrollIntoView({block:"nearest"});});
+      <td><span class="sig">${bars}</span></td>`;
+    tr.addEventListener("click",()=>{selectDevice(c.id);$("detailPanel").scrollIntoView({block:"nearest"});});
     tb.appendChild(tr);
   });
-  $("clientCount").textContent=clients.length+" devices";
+  if(!list.length){const tr=document.createElement("tr");tr.innerHTML='<td colspan="4" style="color:var(--muted);padding:22px"></td>';tr.firstChild.textContent="No devices match “"+$("clientSearch").value.trim()+"”.";tb.appendChild(tr);}
+  $("clientCount").textContent=list.length+" of "+clients.length+" devices";
   $("tileClients").innerHTML=clients.length+' <small>online</small>';
+  markSelected();
 }
+$("clientSearch").addEventListener("input",buildClientTable);
 
 /* ---------- Top talkers ---------- */
 function buildTalkers(){
@@ -1986,14 +2020,12 @@ function toast(msg){
 window.toast=toast;
 
 /* ---------- Live tiles ---------- */
-let cpu=14,mem=38,temp=54;
+let load=0.42,mem=38;
 function tick(){
-  cpu=Math.max(4,Math.min(92,cpu+(Math.random()*16-8)));
+  load=Math.max(0.05,Math.min(1.9,load+(Math.random()*0.3-0.15)));
   mem=Math.max(30,Math.min(70,mem+(Math.random()*6-3)));
-  temp=Math.max(48,Math.min(64,temp+(Math.random()*2-1)));
-  $("tileCpu").innerHTML=Math.round(cpu)+'<small>%</small>'; $("barCpu").style.width=cpu+"%";
+  $("tileLoad").textContent=load.toFixed(2);
   $("tileMem").innerHTML=Math.round(mem)+'<small>%</small>'; $("barMem").style.width=mem+"%";
-  $("tileTemp").innerHTML=Math.round(temp)+'<small>°C</small>';
 }
 
 /* ---------- Traffic chart ---------- */

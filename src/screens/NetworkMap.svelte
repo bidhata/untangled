@@ -61,7 +61,9 @@
   $: expandedItems = expandedBand ? clients.filter((c) => c.band === expandedBand) : [];
   $: expandedRows = Math.ceil(expandedItems.length / DEV_PER_ROW) || 0;
   // Taller canvas only when a hub is expanded and spills onto extra rows.
-  $: svgH = 470 + (expandedBand ? 70 + Math.max(0, expandedRows - 1) * ROW_GAP : 0);
+  // 100 = room for the first device row AND its name label (label sits 40 below
+  // the node; with 70 the last row's names fell outside the viewBox and were clipped).
+  $: svgH = 470 + (expandedBand ? 100 + Math.max(0, expandedRows - 1) * ROW_GAP : 0);
 
   function spreadX(i: number, n: number, spread: number) {
     return n <= 1 ? RX : RX - spread / 2 + (spread / (n - 1)) * i;
