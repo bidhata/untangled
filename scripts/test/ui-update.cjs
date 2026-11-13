@@ -33,7 +33,6 @@ const ok = (name, pass, info = '') => { res.push(!!pass); console.log((pass ? 'P
   await panel.waitFor();
   const before = dx(LIST);
   const FROM = (before.split('\n').find((l) => l.startsWith('untangled - ')) || '').slice('untangled - '.length);
-  const jsBefore = await pg.evaluate(() => [...document.scripts].map((s) => s.src).find((s) => /assets\/index-/.test(s)) || '');
   ok('update panel is shown, nothing contacted yet', /Check for updates/.test(await panel.textContent()));
 
   await panel.locator('button:has-text("Check for updates")').click();
@@ -54,8 +53,9 @@ const ok = (name, pass, info = '') => { res.push(!!pass); console.log((pass ? 'P
     await panel.locator('button:has-text("Update now")').click();
     await pg.waitForTimeout(1200);
     if (OUT) await pg.screenshot({ path: OUT + '/update-progress.png' });
-    // the page reloads itself when done
-    await pg.waitForFunction((old) => { const s = [...document.scripts].map((x) => x.src).find((x) => /assets\/index-/.test(x)); return s && s !== old; }, jsBefore, { timeout: 120000 });
+    // The page reloads itself when done, under a fresh ?updated=<ts> URL. (Do not
+    // watch for a new script name: an old test build of the same code has the same one.)
+    await pg.waitForURL(/[?&]updated=\d+/, { timeout: 120000 });
     await pg.waitForSelector('.sidebar', { timeout: 30000 });
     const after = dx(LIST);
     ok('router is on the new version for every installed package', after.split('\n').every((l) => l.endsWith(want)) && after.split('\n').length === before.split('\n').length, before + '  =>  ' + after);
