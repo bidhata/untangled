@@ -488,7 +488,7 @@ details.adv .advb{padding:0 15px 15px;font-size:12.5px;color:var(--muted);line-h
       <div class="tiles">
         <div class="tile"><div class="k"><svg><use href="#i-wan"/></svg> Internet</div><div class="v" style="font-size:16px;margin-top:11px;color:var(--good)">Connected</div><div class="hint mono" style="margin-top:4px">203.0.113.42</div></div>
         <div class="tile"><div class="k"><svg><use href="#i-clients"/></svg> Clients</div><div class="v" id="tileClients">8 <small>online</small></div></div>
-        <div class="tile"><div class="k"><svg><use href="#i-cpu"/></svg> Load (1m)</div><div class="v" id="tileLoad">0.42</div></div>
+        <div class="tile"><div class="k"><svg><use href="#i-cpu"/></svg> CPU</div><div class="v" id="tileCpu">14<small>%</small></div><div class="meter"><i id="barCpu" style="width:14%"></i></div></div>
         <div class="tile"><div class="k"><svg><use href="#i-mem"/></svg> Memory</div><div class="v" id="tileMem">38<small>%</small></div><div class="meter"><i id="barMem" style="width:38%"></i></div></div>
         <div class="tile"><div class="k"><svg><use href="#i-clock"/></svg> Uptime</div><div class="v" style="font-size:16px;margin-top:11px">6d 14h 9m</div></div>
       </div>
@@ -2043,11 +2043,11 @@ function toast(msg){
 window.toast=toast;
 
 /* ---------- Live tiles ---------- */
-let load=0.42,mem=38;
+let cpu=14,mem=38;
 function tick(){
-  load=Math.max(0.05,Math.min(1.9,load+(Math.random()*0.3-0.15)));
+  cpu=Math.max(4,Math.min(92,cpu+(Math.random()*16-8)));
   mem=Math.max(30,Math.min(70,mem+(Math.random()*6-3)));
-  $("tileLoad").textContent=load.toFixed(2);
+  $("tileCpu").innerHTML=Math.round(cpu)+'<small>%</small>'; $("barCpu").style.width=cpu+"%";
   $("tileMem").innerHTML=Math.round(mem)+'<small>%</small>'; $("barMem").style.width=mem+"%";
 }
 

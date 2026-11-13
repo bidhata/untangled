@@ -2,9 +2,18 @@
 # Runs inside the prepared test router: packages + synthetic state for the checks
 # (login `ut` / test1234 limited to the untangled ACL, two fake radios, a second
 # WAN, an IPv6 WAN, and a tmpfs "drive" at /mnt/usb).
-opkg update >/dev/null 2>&1
-opkg install mwan3 samba4-server ddns-scripts ddns-scripts-noip cgi-io >/dev/null 2>&1
+# Set the password first: package install scripts add system users, and a
+# passwd run that overlaps them has been seen to wait on the account-file lock.
 printf 'test1234\ntest1234\n' | passwd root >/dev/null 2>&1
+# opkg on 23.05 / 24.10, apk on 25.12+ and snapshot
+if command -v apk >/dev/null 2>&1; then
+  apk update >/dev/null 2>&1
+  apk add uhttpd uhttpd-mod-ubus rpcd rpcd-mod-file rpcd-mod-luci mwan3 samba4-server ddns-scripts ddns-scripts-noip cgi-io >/dev/null 2>&1
+  /etc/init.d/rpcd enable; /etc/init.d/uhttpd enable
+else
+  opkg update >/dev/null 2>&1
+  opkg install mwan3 samba4-server ddns-scripts ddns-scripts-noip cgi-io >/dev/null 2>&1
+fi
 uci set rpcd.ut=login
 uci set rpcd.ut.username=ut
 uci set rpcd.ut.password='$p$root'

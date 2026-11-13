@@ -1,11 +1,14 @@
 #!/bin/sh
-# usage: scripts/test/run.sh [name] [hostport]
+# usage: scripts/test/run.sh [name] [hostport] [image]
+#   image defaults to OpenWRT 23.05.5; pass ghcr.io/openwrt/rootfs:x86_64-25.12.6
+#   to run the same checks on the apk-based 25.12 line.
 # Builds the app, boots a throwaway OpenWRT 23.05 router in docker and runs every
 # check against it: library code over /ubus, form validation in the UI, then the
 # UI regression checks. Exits non-zero if any check fails. The container is left
 # running for inspection; remove it with: docker rm -f <name>
 N=${1:-untangled-test}
 P=${2:-18080}
+IMG=${3:-ghcr.io/openwrt/rootfs:x86_64-23.05.5}
 HERE=$(cd "$(dirname "$0")" && pwd)
 ROOT=$(cd "$HERE/../.." && pwd)
 OUT=$(mktemp -d)
@@ -23,7 +26,7 @@ node_modules/.bin/esbuild "$HERE/lib-entry.ts" --bundle --platform=node --format
   --define:import.meta.env.DEV=false --define:import.meta.env.VITE_MOCK='"false"' \
   --outfile="$OUT/lib-bundle.cjs" --log-level=warning || exit 1
 
-sh "$HERE/router-boot.sh" "$N" "$P" || exit 1
+sh "$HERE/router-boot.sh" "$N" "$P" "$IMG" || exit 1
 
 fail=0
 echo "--- library checks"

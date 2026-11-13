@@ -71,6 +71,7 @@ const flat = (s) => s.replace(/\n/g, ' | ');
 
   // 4. a failed save must not leak into the next apply
   dx('uci delete dhcp.lan; uci commit dhcp');
+  const lanBefore = dx('uci get network.lan.ipaddr'); // '192.168.1.1' or, on 25.12+, '192.168.1.1/24'
   await nav('lan', 'LAN');
   await pg.locator('.form-row:has-text("Router address") input').first().fill('192.168.9.1');
   await pg.locator('.form-actions button:has-text("Apply")').click();
@@ -81,7 +82,7 @@ const flat = (s) => s.replace(/\n/g, ' | ');
   await pg.locator('.panel:has(h2:has-text("General")) button:has-text("Apply")').click();
   await pg.waitForTimeout(2500);
   const after = dx('uci get network.lan.ipaddr; uci get system.@system[0].hostname');
-  ok('failed LAN save is discarded, later save applies alone', !dialog && after === '192.168.1.1\n' + HN, 'toast "' + t4 + '"; router now: ' + flat(after));
+  ok('failed LAN save is discarded, later save applies alone', !dialog && after === lanBefore + '\n' + HN, 'toast "' + t4 + '"; router now: ' + flat(after));
 
   // 5. USB: no system partitions listed, sharing refuses a non-drive folder
   await nav('usb', 'USB Storage');

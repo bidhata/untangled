@@ -17,6 +17,9 @@ npm i --no-save playwright-core && npx playwright-core install chromium
 scripts/test/run.sh                 # container "untangled-test" on port 18080
 scripts/test/run.sh mybox 18090     # or pick a name and port
 docker rm -f untangled-test         # when done
+
+# the same checks on the apk-based 25.12 line
+scripts/test/run.sh box25 18082 ghcr.io/openwrt/rootfs:x86_64-25.12.6
 ```
 
 `run.sh` builds the app, boots a fresh router, and runs three suites. It exits
@@ -54,6 +57,8 @@ snapshot router. `ui-update.cjs` also has `nofeed` and `current` modes.
   OpenWRT SDK, the way the release workflow does. Run it before pushing a change
   to `openwrt/Makefile` or the package payload, then `opkg install` the result
   in a booted router.
+- `feed-install-apk.sh` — the same for the apk feed, on a 25.12+ or snapshot
+  router.
 - `feed-install.sh` — run inside a prepared router after a release to prove the
   published signed feed installs on a stock image:
   `docker cp scripts/test/feed-install.sh <name>:/root/ && docker exec <name> sh /root/feed-install.sh`

@@ -2,7 +2,7 @@
 // in the signed package feed, from the browser.
 //
 // Deliberately narrow. The rpcd ACL grants exactly these command lines and no
-// others, for opkg (stable releases) and apk (snapshot):
+// others, for opkg (OpenWrt 23.05 / 24.10) and apk (25.12+ and snapshot):
 //     <pm> update
 //     <pm> list-upgradable            (apk: list --upgradable)
 //     opkg upgrade <name>  /  apk add --upgrade <name>

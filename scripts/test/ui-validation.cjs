@@ -31,6 +31,9 @@ const ok = (name, pass, info = '') => { res.push(!!pass); console.log((pass ? 'P
 
   // LAN: bad address and bad mask are refused, nothing reaches the router
   await nav('lan', 'LAN');
+  // 23.05/24.10 store ipaddr + netmask, 25.12+ a single 'ip/prefix' list entry.
+  const lanCfg = () => dx('uci -q get network.lan.ipaddr; uci -q get network.lan.netmask');
+  const lanBefore = lanCfg();
   const lanIp = pg.locator('.form-row:has-text("Router address") input').first();
   await lanIp.fill('192.168.1.999');
   await pg.locator('.form-actions button:has-text("Apply")').click();
@@ -40,7 +43,7 @@ const ok = (name, pass, info = '') => { res.push(!!pass); console.log((pass ? 'P
   await mask.fill('255.0.255.0');
   await pg.locator('.form-actions button:has-text("Apply")').click();
   const t2 = await lastToast();
-  ok('LAN refuses a bad address and a bad mask', /router address/.test(t1) && /subnet mask/.test(t2) && !(await pg.$('.dlg')) && dx('uci get network.lan.ipaddr; uci get network.lan.netmask') === '192.168.1.1\n255.255.255.0', t1 + ' / ' + t2);
+  ok('LAN refuses a bad address and a bad mask', /router address/.test(t1) && /subnet mask/.test(t2) && !(await pg.$('.dlg')) && lanCfg() === lanBefore, t1 + ' / ' + t2);
 
   // WAN: static without a gateway
   await nav('wan', 'Internet');

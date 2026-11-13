@@ -103,8 +103,8 @@ Prefer a file? Every release attaches raw `.ipk` (23.05 / 24.10) and `.apk` (25.
 Open **System → Software** and press **Check for updates**. If the feed has a newer UnTangled, **Update now** installs it and reloads the page; your router settings are not touched. This needs the feed from the install steps above and a router that is online. It works from version 0.1.17 on, so an older install needs one last update from the command line:
 
 ```sh
-opkg update && opkg upgrade untangled untangled-full untangled-mesh   # stable (list only the ones you installed)
-apk update && apk add --upgrade untangled-full                         # snapshot
+opkg update && opkg upgrade untangled untangled-full untangled-mesh   # OpenWRT 23.05 / 24.10 (list only the ones you installed)
+apk update && apk add --upgrade untangled-full                         # OpenWRT 25.12+ and snapshot
 ```
 
 If the page looks unchanged after a command-line upgrade from 0.1.16 or older, reload it once with Ctrl+Shift+R; newer versions make the browser notice by themselves.
@@ -142,7 +142,7 @@ package is `PKGARCH:=all`), with room for its dependencies: `uhttpd`,
 | QoS · Dynamic DNS · UPnP · Dual-WAN · USB sharing · Usage history | `sqm-scripts` · `ddns-scripts` · `miniupnpd-nftables` · `mwan3` · `ksmbd`/`minidlna` · `vnstat` + `nlbwmon` |
 | Mesh Wi-Fi · Tailscale | `untangled-mesh` · `tailscale` |
 
-> **Beta.** Verified on OpenWRT 23.05 and snapshot container images (install, serving, signed feed), with a field report on the 25.x stable line (JioRouter AX6000 / JIDU6101 on OpenWrt 25.12 — UI + device detection; see [`docs/HARDWARE_MATRIX.md`](docs/HARDWARE_MATRIX.md)). **Not yet validated across physical routers** for roaming/mesh — behaviour that depends on live radios, clients and vendor Wi-Fi drivers may vary by device. Mesh is OpenWRT-to-OpenWRT only and is **not** certified Multi-AP/prplMesh. Please [open an issue](https://github.com/bidhata/untangled/issues) with your model if something looks off.
+> **Beta.** Verified on OpenWRT 23.05, 25.12 and snapshot container images (install, serving, signed feed, the full check suite on 23.05 and 25.12), with a field report on the 25.12 line (JioRouter AX6000 / JIDU6101 on OpenWrt 25.12 — UI + device detection; see [`docs/HARDWARE_MATRIX.md`](docs/HARDWARE_MATRIX.md)). **Not yet validated across physical routers** for roaming/mesh — behaviour that depends on live radios, clients and vendor Wi-Fi drivers may vary by device. Mesh is OpenWRT-to-OpenWRT only and is **not** certified Multi-AP/prplMesh. Please [open an issue](https://github.com/bidhata/untangled/issues) with your model if something looks off.
 
 ---
 

@@ -87,6 +87,11 @@
   }
 
 
+  // Plain words for the internet connection, where the router's receive/send
+  // IS the household's download/upload; neutral words for every other interface,
+  // where it is not (a LAN port's "received" is a device uploading).
+  $: isWan = !!selected && selected === wanDev;
+
   function select(name: string) {
     selected = name;
     showSelected();
@@ -153,9 +158,9 @@
   <div class="panel"><div class="panel-b" style="color:var(--crit)">{error}</div></div>
 {:else}
   <div class="traffic-big">
-    <div class="tbox"><div class="k"><i style="background:var(--accent)"></i> RX</div><div class="v">{curDown.toFixed(1)}<small> Mbps</small></div></div>
-    <div class="tbox"><div class="k"><i style="background:var(--good)"></i> TX</div><div class="v">{curUp.toFixed(1)}<small> Mbps</small></div></div>
-    <div class="tbox"><div class="k">Peak RX</div><div class="v">{peak.toFixed(1)}<small> Mbps</small></div></div>
+    <div class="tbox"><div class="k"><i style="background:var(--accent)"></i> {isWan ? 'Download' : 'Received'}</div><div class="v">{curDown.toFixed(1)}<small> Mbps</small></div></div>
+    <div class="tbox"><div class="k"><i style="background:var(--good)"></i> {isWan ? 'Upload' : 'Sent'}</div><div class="v">{curUp.toFixed(1)}<small> Mbps</small></div></div>
+    <div class="tbox"><div class="k">{isWan ? 'Peak download' : 'Peak received'}</div><div class="v">{peak.toFixed(1)}<small> Mbps</small></div></div>
     <div class="tbox"><div class="k">Interface</div><div class="v" style="font-size:18px">{selected || '—'}</div></div>
   </div>
 
@@ -168,7 +173,7 @@
     <div class="panel-h"><h2>Interfaces</h2><span class="sub">totals since boot</span></div>
     <div style="overflow-x:auto">
       <table class="clients">
-        <thead><tr><th>Interface</th><th>RX</th><th>TX</th><th>Total transferred</th></tr></thead>
+        <thead><tr><th>Interface</th><th>Received</th><th>Sent</th><th>Total transferred</th></tr></thead>
         <tbody>
           {#each rows as r}
             <!-- The whole row is clickable for the mouse; keyboard users reach the same action via the name button, whose click bubbles up here. -->
@@ -187,7 +192,7 @@
       </table>
     </div>
   </div>
-  <p class="hint" style="margin-top:12px">RX/TX are counted from the router's side: RX is what the router receives on an interface, TX what it sends. Per-client usage history needs an accounting package (nlbwmon or collectd); this view uses live interface counters, which every build has.</p>
+  <p class="hint" style="margin-top:12px">Received and sent are counted from the router's side: what the router takes in on an interface, and what it puts out. On your internet connection that is download and upload. Per-client usage history needs an accounting package (nlbwmon or collectd); this view uses live interface counters, which every build has.</p>
 {/if}
 
 <style>
