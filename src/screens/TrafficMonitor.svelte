@@ -3,10 +3,15 @@
   import { getDevices, getWan, formatBytes, type DevStat } from '../lib/net';
 
   const N = 60;
-  let down: number[] = Array(N).fill(0); // Mbps
+  type History = { down: number[]; up: number[]; peak: number }; // Mbps
+  // Every interface keeps its own 60 s history, so switching the graph
+  // to another interface shows its recent past right away.
+  const history = new Map<string, History>();
+  let down: number[] = Array(N).fill(0);
   let up: number[] = Array(N).fill(0);
   let curDown = 0, curUp = 0, peak = 0;
   let wanDev = '';
+  let selected = ''; // interface shown in the graph; defaults to the WAN device
   let rows: { name: string; down: number; up: number; total: number }[] = [];
   let error = '';
 
@@ -28,7 +33,6 @@
 
       const next = new Map<string, { rx: number; tx: number }>();
       const table: typeof rows = [];
-      let wd = 0, wu = 0;
 
       for (const d of devs) {
         next.set(d.name, { rx: d.rxBytes, tx: d.txBytes });
@@ -39,19 +43,46 @@
           uMbps = Math.max(0, ((d.txBytes - p.tx) * 8) / dt / 1e6);
         }
         table.push({ name: d.name, down: dMbps, up: uMbps, total: d.rxBytes + d.txBytes });
-        if (d.name === wanDev) { wd = dMbps; wu = uMbps; }
+
+        const h = history.get(d.name) ?? { down: Array(N).fill(0), up: Array(N).fill(0), peak: 0 };
+        h.down = [...h.down.slice(1), dMbps];
+        h.up = [...h.up.slice(1), uMbps];
+        h.peak = Math.max(h.peak, dMbps);
+        history.set(d.name, h);
       }
       prev = next; prevTs = now;
 
-      curDown = wd; curUp = wu; peak = Math.max(peak, wd);
-      down = [...down.slice(1), wd];
-      up = [...up.slice(1), wu];
+      if (!selected) selected = wanDev;
       rows = table.filter((r) => r.total > 0).sort((a, b) => b.total - a.total).slice(0, 10);
       error = '';
-      draw();
+      showSelected();
     } catch {
       error = 'Could not read traffic counters from the router.';
     }
+  }
+
+  function showSelected() {
+    const h = history.get(selected);
+    if (h) {
+      down = h.down;
+      up = h.up;
+      peak = h.peak;
+      curDown = h.down[N - 1];
+      curUp = h.up[N - 1];
+    } else {
+      down = Array(N).fill(0);
+      up = Array(N).fill(0);
+      peak = 0;
+      curDown = 0;
+      curUp = 0;
+    }
+    draw();
+  }
+
+
+  function select(name: string) {
+    selected = name;
+    showSelected();
   }
 
   function draw() {
@@ -107,7 +138,7 @@
   <div>
     <div class="breadcrumb">General</div>
     <h1>Traffic Monitor</h1>
-    <p>Live throughput on your internet connection, read from the interface counters every second.</p>
+    <p>Live throughput per interface, read from the interface counters every second. Click an interface below to show it in the graph.</p>
   </div>
 </div>
 
@@ -115,14 +146,14 @@
   <div class="panel"><div class="panel-b" style="color:var(--crit)">{error}</div></div>
 {:else}
   <div class="traffic-big">
-    <div class="tbox"><div class="k"><i style="background:var(--accent)"></i> Download</div><div class="v">{curDown.toFixed(1)}<small> Mbps</small></div></div>
-    <div class="tbox"><div class="k"><i style="background:var(--good)"></i> Upload</div><div class="v">{curUp.toFixed(1)}<small> Mbps</small></div></div>
-    <div class="tbox"><div class="k">Peak download</div><div class="v">{peak.toFixed(1)}<small> Mbps</small></div></div>
-    <div class="tbox"><div class="k">WAN device</div><div class="v" style="font-size:18px">{wanDev || '—'}</div></div>
+    <div class="tbox"><div class="k"><i style="background:var(--accent)"></i> RX</div><div class="v">{curDown.toFixed(1)}<small> Mbps</small></div></div>
+    <div class="tbox"><div class="k"><i style="background:var(--good)"></i> TX</div><div class="v">{curUp.toFixed(1)}<small> Mbps</small></div></div>
+    <div class="tbox"><div class="k">Peak RX</div><div class="v">{peak.toFixed(1)}<small> Mbps</small></div></div>
+    <div class="tbox"><div class="k">Interface</div><div class="v" style="font-size:18px">{selected || '—'}</div></div>
   </div>
 
   <div class="panel">
-    <div class="panel-h"><h2>Throughput</h2><span class="sub">last 60 s · Mbps</span></div>
+    <div class="panel-h"><h2>Throughput</h2><span class="sub">{selected || '—'} · last 60 s · Mbps</span></div>
     <div class="chartwrap"><canvas bind:this={canvas} width="1000" height="260"></canvas></div>
   </div>
 
@@ -130,11 +161,13 @@
     <div class="panel-h"><h2>Interfaces</h2><span class="sub">totals since boot</span></div>
     <div style="overflow-x:auto">
       <table class="clients">
-        <thead><tr><th>Interface</th><th>Download</th><th>Upload</th><th>Total transferred</th></tr></thead>
+        <thead><tr><th>Interface</th><th>RX</th><th>TX</th><th>Total transferred</th></tr></thead>
         <tbody>
           {#each rows as r}
-            <tr style="cursor:default">
-              <td class="mono"><b style="font-weight:600">{r.name}</b></td>
+            <!-- The whole row is clickable for the mouse; keyboard users reach the same action via the name button, whose click bubbles up here. -->
+            <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
+            <tr class:sel={r.name === selected} on:click={() => select(r.name)}>
+              <td class="mono"><button class="ifname" aria-pressed={r.name === selected}>{r.name}</button></td>
               <td class="mono">{r.down.toFixed(1)} Mbps</td>
               <td class="mono">{r.up.toFixed(1)} Mbps</td>
               <td class="mono">{formatBytes(r.total)}</td>
@@ -147,5 +180,9 @@
       </table>
     </div>
   </div>
-  <p class="hint" style="margin-top:12px">Per-client usage history needs an accounting package (nlbwmon or collectd); this view uses live interface counters, which every build has.</p>
+  <p class="hint" style="margin-top:12px">RX/TX are counted from the router's side: RX is what the router receives on an interface, TX what it sends. Per-client usage history needs an accounting package (nlbwmon or collectd); this view uses live interface counters, which every build has.</p>
 {/if}
+
+<style>
+  .ifname { background: none; border: 0; padding: 0; color: inherit; font: inherit; font-weight: 600; cursor: pointer; }
+</style>
