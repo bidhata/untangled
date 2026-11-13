@@ -40,7 +40,9 @@
   }
 
   onMount(() => {
-    loadAll();
+    // CPU usage needs two samples; refresh once more after a second so the
+    // tile doesn't wait for the first 5 s poll.
+    loadAll().then(() => setTimeout(refreshLight, 1000));
     timer = setInterval(refreshLight, 5000);
   });
   onDestroy(() => clearInterval(timer));
@@ -137,8 +139,13 @@
       {/if}
     </div>
     <div class="tile">
-      <div class="k"><Icon name="i-cpu" size={15} /> Load (1m)</div>
-      <div class="v">{sys?.load1 ?? 0}</div>
+      <div class="k"><Icon name="i-cpu" size={15} /> CPU</div>
+      {#if sys?.cpuUsedPct != null}
+        <div class="v">{sys.cpuUsedPct}<small>%</small></div>
+      {:else}
+        <div class="v">—</div>
+      {/if}
+      <div class="meter"><i style="width:{sys?.cpuUsedPct ?? 0}%"></i></div>
     </div>
     <div class="tile">
       <div class="k"><Icon name="i-mem" size={15} /> Memory</div>

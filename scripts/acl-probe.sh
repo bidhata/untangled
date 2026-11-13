@@ -49,6 +49,7 @@ expect ALLOW "exec ping plugin with host target"         $SID file exec '{"comma
 expect ALLOW "exec etherwake (absent -> NOT_FOUND ok)"   $SID file exec '{"command":"etherwake","params":["-i","br-lan","00:11:22:33:44:55"]}'
 expect ALLOW "read /etc/crontabs/root"                   $SID file read '{"path":"/etc/crontabs/root"}'
 expect ALLOW "read /proc/mounts"                         $SID file read '{"path":"/proc/mounts"}'
+expect ALLOW "read /proc/stat"                           $SID file read '{"path":"/proc/stat"}'
 expect ALLOW "write /etc/crontabs/root"                  $SID file write '{"path":"/etc/crontabs/root","data":"# untangled test\n","mode":384}'
 expect ALLOW "write /etc/openvpn/x.ovpn"                 $SID file write '{"path":"/etc/openvpn/x.ovpn","data":"client\n","mode":384}'
 expect ALLOW "uci get dhcp"                              $SID uci get '{"config":"dhcp"}'

@@ -8,7 +8,8 @@ export type DeviceKind =
 export type Band = '5' | '24' | '6' | 'wired' | '?';
 
 export interface BoardInfo { model: string; hostname: string; firmware: string; }
-export interface SysInfo { uptimeSec: number; load1: number; memUsedPct: number; }
+// cpuUsedPct is null until two /proc/stat samples exist (or if it can't be read).
+export interface SysInfo { uptimeSec: number; cpuUsedPct: number | null; memUsedPct: number; }
 export interface WanStatus {
   up: boolean; proto: string; device: string;
   ipv4: string | null; gateway: string | null; dns: string[]; uptimeSec: number;
@@ -31,13 +32,43 @@ export async function getBoard(): Promise<BoardInfo> {
 }
 
 export async function getSysInfo(): Promise<SysInfo> {
-  const s = await call<any>('system', 'info');
+  const [s, cpuUsedPct] = await Promise.all([call<any>('system', 'info'), getCpuUsedPct()]);
   const mem = s?.memory ?? {};
   const total = num(mem.total);
   const avail = num(mem.available ?? mem.free);
   const memUsedPct = total ? Math.round(((total - avail) / total) * 100) : 0;
-  const load1 = Array.isArray(s?.load) ? +(num(s.load[0]) / 65536).toFixed(2) : 0;
-  return { uptimeSec: num(s?.uptime), load1, memUsedPct };
+  return { uptimeSec: num(s?.uptime), cpuUsedPct, memUsedPct };
+}
+
+// ---- CPU usage from /proc/stat ---------------------------------------------
+// The first line of /proc/stat holds the time all CPUs together have spent in
+// each state since boot: "cpu  user nice system idle iowait irq softirq steal …".
+// Usage is the share of non-idle time between two reads, so the first call
+// only stores a sample and returns null.
+type CpuSample = { busy: number; total: number };
+let prevCpu: CpuSample | null = null;
+
+async function readCpuSample(): Promise<CpuSample | null> {
+  try {
+    const r = await call<{ data?: string }>('file', 'read', { path: '/proc/stat' });
+    const cpuLine = (r?.data ?? '').split('\n').find((line) => line.startsWith('cpu '));
+    if (!cpuLine) return null;
+    const times = cpuLine.trim().split(/\s+/).slice(1, 9).map(Number);
+    const total = times.reduce((sum, t) => sum + t, 0);
+    const idle = times[3] + (times[4] ?? 0); // idle + iowait
+    return { busy: total - idle, total };
+  } catch {
+    return null;
+  }
+}
+
+async function getCpuUsedPct(): Promise<number | null> {
+  const cur = await readCpuSample();
+  const prev = prevCpu;
+  prevCpu = cur;
+  if (!cur || !prev || cur.total <= prev.total) return null;
+  const pct = ((cur.busy - prev.busy) / (cur.total - prev.total)) * 100;
+  return Math.round(Math.min(100, Math.max(0, pct)));
 }
 
 /** RFC1918 or CGNAT (100.64/10) address → the router sits behind another NAT. */

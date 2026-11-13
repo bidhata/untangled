@@ -98,6 +98,16 @@ function systemInfo() {
   };
 }
 
+// /proc/stat "cpu" line whose counters grow on every read, at ~20 % busy
+// with some jitter, so the CPU tile shows a plausible live value.
+let mockCpuBusy = 0, mockCpuIdle = 0;
+function procStat() {
+  const busy = Math.round(20 * (1 + (Math.random() - 0.5) * 0.5));
+  mockCpuBusy += busy;
+  mockCpuIdle += 100 - busy;
+  return { data: `cpu  ${mockCpuBusy} 0 0 ${mockCpuIdle} 0 0 0 0 0 0\n` };
+}
+
 function interfaceDump() {
   return {
     interface: [
@@ -179,6 +189,8 @@ export function mockCall(object: string, method: string, params: Record<string, 
       return wirelessStatus();
     case 'iwinfo.assoclist':
       return assoclist(String(params.device ?? ''));
+    case 'file.read':
+      return params.path === '/proc/stat' ? procStat() : {};
     default:
       // Unknown object: behave like NO_DATA so callers fall back gracefully.
       return {};

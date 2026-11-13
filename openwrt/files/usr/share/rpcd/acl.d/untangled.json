@@ -65,6 +65,9 @@
         "/proc/mounts": [
           "read"
         ],
+        "/proc/stat": [
+          "read"
+        ],
         "/tmp/untangled-backup.tar.gz": [
           "read"
         ],
