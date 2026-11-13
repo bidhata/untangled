@@ -84,6 +84,7 @@
           "add",
           "set",
           "delete",
+          "revert",
           "order",
           "commit",
           "apply",

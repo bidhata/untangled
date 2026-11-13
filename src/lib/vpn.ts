@@ -105,7 +105,9 @@ export async function addWgClient(name: string, wgQuick: string): Promise<void> 
   const allowed = get(/AllowedIPs\s*=\s*(.+)/i) || '0.0.0.0/0';
   if (!privateKey || !publicKey) throw new Error('Not a valid WireGuard config');
   const ifn = `vpnc_${slug(name)}`.slice(0, 15);
-  const [host, port] = endpoint.split(':');
+  const cut = endpoint.lastIndexOf(':');
+  const host = (cut > 0 ? endpoint.slice(0, cut) : endpoint).replace(/^\[|\]$/g, '');
+  const port = cut > 0 ? endpoint.slice(cut + 1) : '';
   await uciAdd('network', 'interface', ifn, {
     proto: 'wireguard',
     private_key: privateKey,

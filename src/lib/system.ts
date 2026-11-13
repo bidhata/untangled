@@ -1,4 +1,4 @@
-import { call, uciSet, uciApply } from './ubus';
+import { call, uciSet, uciApply, UbusError } from './ubus';
 
 export interface SysCfg { id: string; hostname: string; timezone: string; zonename: string; }
 
@@ -43,13 +43,17 @@ async function readCron(): Promise<string> {
   try {
     const r = await call<any>('file', 'read', { path: CRON_PATH });
     return typeof r?.data === 'string' ? r.data : '';
-  } catch {
-    return '';
+  } catch (e) {
+    // Only "no crontab yet" means empty. Any other failure must stop a save,
+    // which would otherwise rewrite the file with just our line and drop the
+    // user's own cron jobs.
+    if (e instanceof UbusError && e.code === 4) return '';
+    throw e;
   }
 }
 
 export async function loadRebootSchedule(): Promise<RebootSchedule> {
-  const line = (await readCron()).split('\n').find((l) => l.includes(CRON_MARK));
+  const line = (await readCron().catch(() => '')).split('\n').find((l) => l.includes(CRON_MARK));
   const def: RebootSchedule = { enabled: false, hour: 4, minute: 0, day: '*' };
   if (!line) return def;
   // minute hour dom month dow  cmd
@@ -71,7 +75,7 @@ export async function saveRebootSchedule(s: RebootSchedule): Promise<void> {
     const dow = /^[0-6]$/.test(String(s.day)) ? String(s.day) : '*';
     kept.push(`${min} ${hr} * * ${dow} /sbin/reboot ${CRON_MARK}`);
   }
-  await call('file', 'write', { path: CRON_PATH, data: kept.join('\n') + '\n', mode: 600 });
+  await call('file', 'write', { path: CRON_PATH, data: kept.join('\n') + '\n', mode: 0o600 });
   // Make sure crond is enabled and picks up the change.
   await call('file', 'exec', { command: '/etc/init.d/cron', params: ['enable'] }).catch(() => {});
   await call('file', 'exec', { command: '/etc/init.d/cron', params: ['restart'] }).catch(() => {});
@@ -111,8 +115,8 @@ export const TIMEZONES: { zonename: string; timezone: string }[] = [
   { zonename: 'Europe/London', timezone: 'GMT0BST,M3.5.0/1,M10.5.0' },
   { zonename: 'Europe/Berlin', timezone: 'CET-1CEST,M3.5.0,M10.5.0/3' },
   { zonename: 'Asia/Kolkata', timezone: 'IST-5:30' },
-  { zonename: 'Asia/Dhaka', timezone: 'BDT-6' },
-  { zonename: 'Asia/Singapore', timezone: '+08' },
+  { zonename: 'Asia/Dhaka', timezone: '<+06>-6' },
+  { zonename: 'Asia/Singapore', timezone: '<+08>-8' }, // a bare '+08' is not a valid POSIX TZ and falls back to UTC
   { zonename: 'America/New_York', timezone: 'EST5EDT,M3.2.0,M11.1.0' },
   { zonename: 'America/Los_Angeles', timezone: 'PST8PDT,M3.2.0,M11.1.0' }
 ];

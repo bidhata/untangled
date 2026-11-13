@@ -53,8 +53,8 @@ export async function restoreSession(): Promise<string | null> {
     await call('session', 'access', {});
     // Recover the username from rpcd's own session info for the UI header.
     try {
-      const info = await call<{ data?: { username?: string } }>('session', 'get', {});
-      return info?.data?.username ?? 'root';
+      const info = await call<{ values?: { username?: string } }>('session', 'get', {});
+      return info?.values?.username ?? 'root';
     } catch {
       return 'root';
     }
@@ -177,6 +177,8 @@ export async function login(username: string, password: string): Promise<LoginRe
 export async function logout(): Promise<void> {
   try {
     await call('session', 'destroy', {});
+  } catch {
+    /* already expired or unreachable: the local sign-out below still applies */
   } finally {
     setSession(NULL_SESSION);
   }
@@ -187,25 +189,64 @@ export async function logout(): Promise<void> {
 export function uciGet(config: string, section?: string) {
   return call<Record<string, unknown>>('uci', 'get', section ? { config, section } : { config });
 }
+
+// rpcd keeps uci set/add/delete as STAGED changes on the session until an
+// apply. If a save fails half-way, its staged half would otherwise ride along
+// with the next unrelated apply (e.g. a half-built guest network going live
+// when the user later renames the router). So: remember which configs have
+// staged changes, and when a staging step or the apply itself fails, revert
+// them before the error reaches the screen.
+const staged = new Set<string>();
+
+async function discardStaged(): Promise<void> {
+  const configs = [...staged];
+  staged.clear();
+  for (const config of configs) {
+    try { await call('uci', 'revert', { config }); } catch { /* best effort */ }
+  }
+}
+async function stage<T>(config: string, op: Promise<T>): Promise<T> {
+  staged.add(config);
+  try {
+    return await op;
+  } catch (e) {
+    await discardStaged();
+    throw e;
+  }
+}
+async function applyStaged<T>(op: Promise<T>): Promise<T> {
+  try {
+    const r = await op;
+    staged.clear();
+    return r;
+  } catch (e) {
+    await discardStaged();
+    throw e;
+  }
+}
+
 export function uciSet(config: string, section: string, values: Record<string, unknown>) {
-  return call('uci', 'set', { config, section, values });
+  return stage(config, call('uci', 'set', { config, section, values }));
 }
 export function uciAdd(config: string, type: string, name: string | undefined, values: Record<string, unknown> = {}) {
-  return call<{ section: string }>('uci', 'add', name ? { config, type, name, values } : { config, type, values });
+  return stage(config, call<{ section: string }>('uci', 'add', name ? { config, type, name, values } : { config, type, values }));
 }
+/** Deleting something that is already absent is routine (callers `.catch` it),
+ *  so a failed delete does not discard the rest of the staged save. */
 export function uciDelete(config: string, section: string, option?: string) {
+  staged.add(config);
   return call('uci', 'delete', option ? { config, section, option } : { config, section });
 }
 /** Commit staged changes and reload affected services (no rollback window). */
 export function uciApply() {
-  return call('uci', 'apply', { rollback: false });
+  return applyStaged(call('uci', 'apply', { rollback: false }));
 }
 /** Apply with a rollback timer: if uciConfirm isn't called within `timeout`
  *  seconds, the router restores the previous config. Prevents lockouts.
  *  Keep this LONGER than the UI confirm countdown (confirm.ts, 90s) so a
  *  last-second "Keep" reaches the router before it auto-reverts. */
 export function uciApplyRollback(timeout = 120) {
-  return call('uci', 'apply', { rollback: true, timeout });
+  return applyStaged(call('uci', 'apply', { rollback: true, timeout }));
 }
 /** Keep changes applied with uciApplyRollback (cancels the revert timer). */
 export function uciConfirm() {

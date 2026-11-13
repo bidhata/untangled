@@ -136,7 +136,7 @@ export async function setBlocked(mac: string, name: string, blocked: boolean, ex
   if (blocked) {
     const v = {
       name: `${BLOCK_PREFIX} ${name}`, src: 'lan', dest: 'wan',
-      src_mac: mac.toUpperCase(), target: 'REJECT', enabled: '1'
+      src_mac: mac.toUpperCase(), proto: 'all', target: 'REJECT', enabled: '1'
     };
     if (existingId) await uciSet('firewall', existingId, v);
     else await uciAdd('firewall', 'rule', undefined, v);

@@ -57,7 +57,13 @@ export async function saveGuest(g: GuestNet): Promise<void> {
  * but not the LAN, and a guest SSID on the first radio.
  * Verify on-device; drivers/bridge naming vary slightly by target.
  */
-export async function createGuest(ssid = 'OpenWrt-Guest', key = 'guest-wifi-1234'): Promise<void> {
+/** A fresh password per router: a fixed default would be the same on every install. */
+function randomKey(): string {
+  const abc = 'abcdefghjkmnpqrstuvwxyz23456789';
+  return Array.from(crypto.getRandomValues(new Uint8Array(12)), (b) => abc[b % abc.length]).join('');
+}
+
+export async function createGuest(ssid = 'OpenWrt-Guest', key = randomKey()): Promise<void> {
   // 1) network interface (netifd auto-bridges the attached wifi as br-guest)
   await uciAdd('network', 'interface', 'guest', {
     proto: 'static',

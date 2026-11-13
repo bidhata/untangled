@@ -41,12 +41,15 @@ define Package/untangled-full
   TITLE:=UnTangled web interface (full feature set)
   URL:=https://github.com/bidhata/untangled
   # Pulls the optional capabilities. HTTPS needs a TLS stack + self-signed cert
-  # generator; depend on the VIRTUAL providers (libustream-ssl / px5g) so any
-  # already-installed variant (mbedtls/openssl/wolfssl) satisfies them. Hard-
-  # depending on the -mbedtls variants clashes on images that ship the openssl/
-  # wolfssl ones (e.g. FriendlyWrt): both own /lib/libustream-ssl.so and
-  # /usr/sbin/px5g. See https://github.com/bidhata/untangled/issues/2
-  DEPENDS:=+untangled +rpcd-mod-iwinfo +rpcd-mod-rpcsys +rpcd-mod-luci +libustream-ssl +px5g +cgi-io +etherwake
+  # generator. `px5g` is a real virtual name (every px5g-* variant PROVIDES it).
+  # The TLS library has NO such name: libustream-{mbedtls,openssl,wolfssl} only
+  # provide their own names, so `+libustream-ssl` (tried in 0.1.14) made this
+  # package uninstallable everywhere ("cannot find dependency libustream-ssl"),
+  # and hard-depending on -mbedtls clashes on openssl/wolfssl images such as
+  # FriendlyWrt (issue #2: both own /lib/libustream-ssl.so). So no TLS-library
+  # dependency at all: stock images already carry one, and 91-untangled-https
+  # only turns the HTTPS redirect on when /lib/libustream-ssl.so exists.
+  DEPENDS:=+untangled +rpcd-mod-iwinfo +rpcd-mod-rpcsys +rpcd-mod-luci +px5g +cgi-io +etherwake
   PKGARCH:=all
 endef
 
@@ -75,7 +78,9 @@ define Package/untangled-mesh
   # roaming; umdns = mesh node discovery. For a WIRELESS 802.11s backhaul also
   # install a mesh-capable wpad (e.g. wpad-mesh-mbedtls); wired backhaul needs
   # nothing extra.
-  DEPENDS:=+untangled +dawn +umdns
+  # ucode + its fs module do the join code's base64 (no `base64` applet on
+  # stock images); both are already installed wherever firewall4 is.
+  DEPENDS:=+untangled +dawn +umdns +ucode +ucode-mod-fs
   PKGARCH:=all
 endef
 

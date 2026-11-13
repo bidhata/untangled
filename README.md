@@ -170,7 +170,7 @@ package is `PKGARCH:=all`), with room for its dependencies: `uhttpd`,
   </tr>
 </table>
 
-**Everything in the box:** Network Map · Devices (fixed IP / block / Wake-on-LAN) · Mesh Wi-Fi · Guest Network · Traffic Monitor · Usage History · Parental Controls · Extend Wi-Fi (repeater) · Network Protection (ad/threat blocking) · Wireless (+ advanced radio tab) · Internet/WAN · Dynamic DNS · QoS / Smart Queue · Dual WAN · UPnP · Port Forwarding · VPN (WireGuard + OpenVPN, server + client) · Tailscale · LAN · IPv6 (server / relay + announced DNS) · Firewall (zones) · DMZ · Administration (hostname, time, password, scheduled reboot, make UnTangled the default page) · System Log · USB Storage (SMB + DLNA) · Firmware (upgrade, backup/restore) · Software (installed packages).
+**Everything in the box:** Network Map · Devices (fixed IP / block / Wake-on-LAN) · Mesh Wi-Fi · Guest Network · Traffic Monitor · Usage History · Parental Controls · Extend Wi-Fi (repeater) · Network Protection (ad/threat blocking) · Wireless (+ advanced radio tab) · Internet/WAN · Dynamic DNS · QoS / Smart Queue · Dual WAN · UPnP · Port Forwarding · VPN (WireGuard + OpenVPN, server + client) · Tailscale · LAN · IPv6 (server / relay + announced DNS) · Firewall (zones) · DMZ · Administration (hostname, time, password, scheduled reboot, make UnTangled the default page) · System Log · Network Doctor (read-only health check) · USB Storage (SMB + DLNA) · Firmware (upgrade, backup/restore) · Software (installed packages).
 
 Many advanced features light up only when their OpenWRT package is present and **degrade gracefully**: each shows an "install *package*" hint instead of an error when it isn't.
 
@@ -249,8 +249,8 @@ detection for `untangled-full`).
 
 Thanks to **[@jc21](https://github.com/jc21)** for the FriendlyWrt install report
 ([#2](https://github.com/bidhata/untangled/issues/2)) — `untangled-full` failing on images
-that ship OpenSSL/wolfSSL instead of mbedTLS, which fixed the TLS dependencies to use the
-virtual providers (`libustream-ssl` / `px5g`) so any installed variant satisfies them.
+that ship OpenSSL/wolfSSL instead of mbedTLS, which led to `untangled-full` no longer
+hard-depending on one TLS variant (it uses whichever `libustream-*` the image already has).
 
 Thanks to the reporter of the **Firefox-on-iPhone sign-in bug** — being bounced to the login
 screen when switching screens — which surfaced that the session token was never persisted;

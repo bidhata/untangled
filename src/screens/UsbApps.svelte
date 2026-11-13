@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import Help from '../components/Help.svelte';
-  import { loadUsb, setSmb, setDlna, type UsbState } from '../lib/usb';
+  import { loadUsb, setSmb, setDlna, shareablePath, type UsbState } from '../lib/usb';
   import { toast } from '../lib/toast';
 
   let state: UsbState | null = null;
@@ -18,20 +18,23 @@
   onMount(load);
 
   // Default a share path to the first attached mount when empty.
-  $: defPath = state?.mounts[0]?.mountpoint ?? '/mnt';
+  $: defPath = state?.mounts[0]?.mountpoint ?? '';
+  const NEED_DRIVE = 'Choose a folder on an attached drive first';
 
   async function applySmb() {
     if (!state) return;
-    busy = true;
     const path = state.smb.path || defPath;
+    if (state.smb.enabled && !shareablePath(path, state.mounts)) { toast(NEED_DRIVE); return; }
+    busy = true;
     try { await setSmb(state.smb.enabled, path, state.smb.id); toast(state.smb.enabled ? 'File sharing on' : 'File sharing off'); await load(); }
     catch { toast('Could not update file sharing'); }
     finally { busy = false; }
   }
   async function applyDlna() {
     if (!state) return;
-    busy = true;
     const path = state.dlna.path || defPath;
+    if (state.dlna.enabled && !shareablePath(path, state.mounts)) { toast(NEED_DRIVE); return; }
+    busy = true;
     try { await setDlna(state.dlna.enabled, path, state.dlna.id); toast(state.dlna.enabled ? 'Media server on' : 'Media server off'); await load(); }
     catch { toast('Could not update the media server'); }
     finally { busy = false; }
@@ -67,7 +70,7 @@
         <div class="form-row"><div class="lbl">Share over the network<Help text="Makes the folder below reachable at \\\\router (SMB) from your computers and phones. Guest access is allowed; set a user in advanced config for private shares." /></div>
           <div class="ctl"><label class="toggle"><input type="checkbox" bind:checked={state.smb.enabled} /><span class="track"></span><span class="knob"></span></label></div></div>
         <div class="form-row"><div class="lbl">Folder<Help text="The folder on the attached drive to share. Defaults to the first mounted drive." /></div>
-          <div class="ctl"><input type="text" bind:value={state.smb.path} placeholder={defPath} spellcheck="false" style="min-width:240px" /></div></div>
+          <div class="ctl"><input type="text" bind:value={state.smb.path} placeholder={defPath || "/mnt/usb"} spellcheck="false" style="min-width:240px" /></div></div>
         <div class="form-actions"><button class="btn primary" on:click={applySmb} disabled={busy}>Apply</button></div>
       {/if}
     </div>
@@ -82,7 +85,7 @@
         <div class="form-row"><div class="lbl">Stream media<Help text="Shares media from the folder below to DLNA-capable TVs, consoles and apps on your network." /></div>
           <div class="ctl"><label class="toggle"><input type="checkbox" bind:checked={state.dlna.enabled} /><span class="track"></span><span class="knob"></span></label></div></div>
         <div class="form-row"><div class="lbl">Media folder<Help text="Where your media lives on the attached drive." /></div>
-          <div class="ctl"><input type="text" bind:value={state.dlna.path} placeholder={defPath} spellcheck="false" style="min-width:240px" /></div></div>
+          <div class="ctl"><input type="text" bind:value={state.dlna.path} placeholder={defPath || "/mnt/usb"} spellcheck="false" style="min-width:240px" /></div></div>
         <div class="form-actions"><button class="btn primary" on:click={applyDlna} disabled={busy}>Apply</button></div>
       {/if}
     </div>

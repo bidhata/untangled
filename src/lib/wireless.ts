@@ -128,6 +128,15 @@ export function htmodeOptions(current: string): string[] {
   return base;
 }
 
+/** Why this password cannot work, or '' when it is fine. hostapd refuses to
+ *  start the whole radio on a bad WPA key, so check before saving. */
+export function keyProblem(encryption: string, key: string): string {
+  if (encryption === 'none') return '';
+  if (key.length < 8) return 'The Wi-Fi password needs at least 8 characters.';
+  if (key.length > 63) return 'The Wi-Fi password can be at most 63 characters.';
+  return '';
+}
+
 export function pwStrength(k: string): { label: string; color: string } {
   if (k.length < 8) return { label: 'Weak', color: 'var(--crit)' };
   if (k.length < 12) return { label: 'Fair', color: 'var(--warn)' };

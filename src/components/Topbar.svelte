@@ -43,7 +43,7 @@
   <button class="tbtn" id="cmdBtn" on:click={() => paletteOpen.set(true)} aria-label="Search">
     <Icon name="i-search" /><span class="lbltxt">Search</span><kbd class="kbd">⌘K</kbd>
   </button>
-  <span class="pill"><span class="dot" class:down={wanUp === false}></span> {wanUp === false ? 'Internet offline' : 'Internet online'}</span>
+  <span class="pill"><span class="dot" class:down={wanUp === false}></span> {wanUp === null ? 'Checking…' : wanUp ? 'Internet online' : 'Internet offline'}</span>
   <button class="tbtn icbtn" on:click={toggleTheme} aria-label="Toggle theme">
     <Icon name={$theme === 'dark' ? 'i-sun' : 'i-moon'} />
   </button>

@@ -21,6 +21,14 @@ export interface UsbState {
 const text = (v: unknown): string => (v == null ? '' : String(Array.isArray(v) ? v[0] : v));
 const first = (v: unknown): string => (Array.isArray(v) ? text(v[0]) : text(v));
 const SHARE_NAME = 'UnTangled';
+const SYSTEM_MOUNT = /^\/($|rom|overlay|boot|etc|tmp|proc|sys|dev|lib|usr|www|root|var)(\/|$)/;
+
+/** A folder is shareable only when it sits on attached storage, never on the router's own filesystem. */
+export function shareablePath(path: string, mounts: UsbMount[]): boolean {
+  const p = path.trim().replace(/\/+$/, '');
+  if (!p.startsWith('/') || p.includes('..')) return false;
+  return mounts.some((m) => p === m.mountpoint || p.startsWith(m.mountpoint + '/'));
+}
 
 async function readMounts(): Promise<UsbMount[]> {
   let data = '';
@@ -29,7 +37,11 @@ async function readMounts(): Promise<UsbMount[]> {
   for (const line of data.split('\n')) {
     const [dev, mnt, fs] = line.split(/\s+/);
     if (!dev || !mnt) continue;
-    if (/^\/dev\/(sd|mmcblk|nvme|ubi)/.test(dev) || /^\/mnt\//.test(mnt)) {
+    // Only real add-on storage. The router's own partitions also live on
+    // sd*/mmcblk*/ubi* devices (/, /rom, /overlay, /boot, bind mounts in /etc);
+    // listing them made "/overlay" the default share folder on NAND routers.
+    if (SYSTEM_MOUNT.test(mnt)) continue;
+    if (/^\/dev\/(sd|mmcblk|nvme)/.test(dev) || /^\/(mnt|media)\//.test(mnt)) {
       out.push({ device: dev, mountpoint: mnt, fstype: fs || '' });
     }
   }

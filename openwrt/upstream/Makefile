@@ -78,9 +78,9 @@ define Package/untangled-full
   SUBMENU:=Web Servers/Proxies
   TITLE:=UnTangled web interface (full feature set)
   URL:=https://github.com/bidhata/untangled
-  # Depend on the VIRTUAL TLS providers (libustream-ssl / px5g) so any installed
-  # variant (mbedtls/openssl/wolfssl) satisfies the dependency. See issue #2.
-  DEPENDS:=+untangled +rpcd-mod-iwinfo +rpcd-mod-rpcsys +rpcd-mod-luci +libustream-ssl +px5g +cgi-io +etherwake
+  # px5g is a real virtual name (any px5g-* variant satisfies it). There is no
+  # such name for the TLS library, so none is listed; see ../Makefile and issue #2.
+  DEPENDS:=+untangled +rpcd-mod-iwinfo +rpcd-mod-rpcsys +rpcd-mod-luci +px5g +cgi-io +etherwake
   PKGARCH:=all
 endef
 
@@ -104,7 +104,7 @@ define Package/untangled-mesh
   SUBMENU:=Web Servers/Proxies
   TITLE:=UnTangled Mesh Wi-Fi (backend)
   URL:=https://github.com/bidhata/untangled
-  DEPENDS:=+untangled +dawn +umdns
+  DEPENDS:=+untangled +dawn +umdns +ucode +ucode-mod-fs
   PKGARCH:=all
 endef
 

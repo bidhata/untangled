@@ -52,7 +52,7 @@ async function clearTimeOptions(id: string) {
 
 /** Block the device all the time (pause now). */
 export async function pauseDevice(mac: string, name: string, existingId: string | null): Promise<void> {
-  const base = { name: `Parental: ${name}`, src: 'lan', dest: 'wan', src_mac: mac, target: 'REJECT', enabled: '1' };
+  const base = { name: `Parental: ${name}`, src: 'lan', dest: 'wan', src_mac: mac, proto: 'all', target: 'REJECT', enabled: '1' };
   if (existingId) {
     await uciSet('firewall', existingId, base);
     await clearTimeOptions(existingId);
@@ -67,10 +67,12 @@ export async function scheduleDevice(
   mac: string, name: string, days: string[], from: string, to: string, existingId: string | null
 ): Promise<void> {
   const values: Record<string, unknown> = {
-    name: `Parental: ${name}`, src: 'lan', dest: 'wan', src_mac: mac, target: 'REJECT', enabled: '1',
+    name: `Parental: ${name}`, src: 'lan', dest: 'wan', src_mac: mac, proto: 'all', target: 'REJECT', enabled: '1',
     start_time: from, stop_time: to
   };
-  if (days.length && days.length < 7) values.weekdays = days;
+  // fw4 requires `weekdays` as ONE space-separated option; a uci list makes it
+  // skip the whole rule ("option 'weekdays' must not be a list").
+  if (days.length && days.length < 7) values.weekdays = days.join(' ');
   if (existingId) {
     await uciSet('firewall', existingId, values);
     if (!(days.length && days.length < 7)) await uciDelete('firewall', existingId, 'weekdays').catch(() => {});

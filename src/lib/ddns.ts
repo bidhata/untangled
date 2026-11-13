@@ -21,11 +21,12 @@ export interface DdnsState {
 export const DDNS_PROVIDERS: { value: string; label: string }[] = [
   { value: 'duckdns.org', label: 'DuckDNS' },
   { value: 'dynv6.com', label: 'dynv6' },
-  { value: 'noip.com', label: 'No-IP' },
   { value: 'dyn.com', label: 'Dyn' },
-  { value: 'cloudflare.com-v4', label: 'Cloudflare' },
-  { value: 'freedns.afraid.org', label: 'FreeDNS (afraid.org)' },
-  { value: 'google.com', label: 'Google Domains' }
+  { value: 'dynu.com', label: 'Dynu' },
+  { value: 'afraid.org-basicauth', label: 'FreeDNS (afraid.org)' },
+  // These two ship in add-on packages, not in ddns-scripts itself.
+  { value: 'no-ip.com', label: 'No-IP (needs ddns-scripts-noip)' },
+  { value: 'cloudflare.com-v4', label: 'Cloudflare (needs ddns-scripts-cloudflare)' }
 ];
 
 const text = (v: unknown): string => (v == null ? '' : String(Array.isArray(v) ? v[0] : v));

@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import Help from '../components/Help.svelte';
   import { loadGuests, saveGuest, createGuest, type GuestNet } from '../lib/guest';
+  import { keyProblem } from '../lib/wireless';
   import { toast } from '../lib/toast';
 
   let guests: GuestNet[] = [];
@@ -28,6 +29,8 @@
     return originals[i] && JSON.stringify(guests[i]) !== JSON.stringify(originals[i]);
   }
   async function apply(i: number) {
+    const bad = keyProblem(guests[i].encryption, guests[i].key);
+    if (bad) { toast(bad); return; }
     busy = true;
     try {
       await saveGuest(guests[i]);

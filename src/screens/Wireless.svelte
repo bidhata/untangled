@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import Help from '../components/Help.svelte';
   import {
-    loadWireless, saveWireless, ENC_OPTIONS, channelOptions, htmodeOptions, pwStrength,
+    loadWireless, saveWireless, ENC_OPTIONS, channelOptions, htmodeOptions, pwStrength, keyProblem,
     type WifiRadio
   } from '../lib/wireless';
   import { toast } from '../lib/toast';
@@ -36,6 +36,8 @@
 
   async function apply() {
     if (!r) return;
+    const bad = keyProblem(r.encryption, r.key);
+    if (bad) { toast(bad); return; }
     busy = true;
     try {
       await saveWireless(r);
