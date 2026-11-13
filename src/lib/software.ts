@@ -2,8 +2,8 @@
 //
 // The Software screen is read-only: it lists installed packages by running the
 // on-device package manager through a path-scoped `file.exec` grant
-// (`opkg list-installed` on stable 23.05/24.10/25.x, `apk list --installed` on
-// snapshot — apk is snapshot-only). Installing and removing packages is left to
+// (`opkg list-installed` on 23.05/24.10, `apk list --installed` on 25.12+ and
+// snapshot). Installing and removing packages is left to
 // opkg/apk on the command line. "Notable apps" (tailscale, vnstat, …) are
 // flagged so the UI can link to the dedicated screen we have for them.
 import { call } from './ubus';
@@ -92,9 +92,9 @@ function parseOpkg(out: string): Pkg[] {
 }
 
 async function listViaExec(): Promise<Pkg[] | null> {
-  // Try apk first (snapshot only), then fall back to opkg (stable: 23.05 / 24.10
-  // / 25.x). apk's installed flag is `--installed` on some builds and `-I` on
-  // others, so try both forms before giving up.
+  // Try apk first (25.12+ and snapshot), then fall back to opkg (23.05 / 24.10).
+  // apk's installed flag is `--installed` on some builds and `-I` on others, so
+  // try both forms before giving up.
   for (const args of [['list', '--installed'], ['list', '-I']]) {
     const apk = await exec('apk', args);
     if (apk) {

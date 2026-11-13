@@ -27,12 +27,12 @@ OpenWRT is the best router firmware there is, but its stock interface was built 
 
 You'll run a few commands **on the router**, either over SSH or in **LuCI → System → Custom Commands** (no SSH needed). It takes about a minute, and LuCI keeps working untouched the whole time.
 
-**Step 1. Which OpenWRT do you have?** In LuCI it's on the **Status → Overview** page (or run `cat /etc/openwrt_release`). If it shows a numbered release like **23.05**, **24.10** or **25.12**, you're on *stable*, so use the **opkg** commands. If it says *SNAPSHOT*, use the **apk** commands. (When in doubt, you're almost certainly on stable.)
+**Step 1. Which OpenWRT do you have?** In LuCI it's on the **Status → Overview** page (or run `cat /etc/openwrt_release`). If it shows **23.05** or **24.10**, use the **opkg** commands. If it shows **25.12** or newer, or *SNAPSHOT*, use the **apk** commands: OpenWRT switched its package manager from opkg to apk with 25.12. (Not sure? Run `which apk opkg` on the router and use the one it finds.)
 
 **Step 2. Add the UnTangled feed and install.** Copy–paste the matching block:
 
 <details open>
-<summary><b>Stable OpenWRT (23.05 / 24.10) — opkg</b></summary>
+<summary><b>OpenWRT 23.05 / 24.10 — opkg</b></summary>
 
 ```sh
 # 1. Trust UnTangled's signing key (so the router knows the packages are genuine)
@@ -49,13 +49,13 @@ opkg install untangled-full
 </details>
 
 <details>
-<summary><b>OpenWRT snapshot — apk</b></summary>
+<summary><b>OpenWRT 25.12+ and snapshot — apk</b></summary>
 
 ```sh
 # 1. Trust UnTangled's signing key
 wget -O /etc/apk/keys/untangled.pem https://bidhata.github.io/untangled/keys/untangled.pem
 
-# 2. Add the feed
+# 2. Add the feed (it is called "snapshot", but serves 25.12+ as well)
 echo 'https://bidhata.github.io/untangled/snapshot/packages.adb' > /etc/apk/repositories.d/untangled.list
 
 # 3. Refresh and install (untangled-full = everything)
@@ -83,18 +83,18 @@ apk add untangled-full
 > its own file is tiny, but installing it pulls in everything. Think of it like
 > a "meal deal" ticket: small ticket, full meal.
 
-Prefer a file? Every release attaches raw `.ipk` (stable) and `.apk` (snapshot) on [Releases](https://github.com/bidhata/untangled/releases). The package is architecture-independent (`PKGARCH:=all`), so one `.ipk` covers every current stable release; apk is used only by OpenWRT snapshot. Post-install ACL notes, size table and HTTPS setup: [`openwrt/README.md`](openwrt/README.md). What a logged-in session is allowed to do on the router (path-scoped rpcd ACL), HTTPS and the signing key: [`docs/SECURITY.md`](docs/SECURITY.md).
+Prefer a file? Every release attaches raw `.ipk` (23.05 / 24.10) and `.apk` (25.12+ and snapshot) on [Releases](https://github.com/bidhata/untangled/releases). The package is architecture-independent (`PKGARCH:=all`), so one `.ipk` covers 23.05 and 24.10, and one `.apk` covers 25.12+ and snapshot. Post-install ACL notes, size table and HTTPS setup: [`openwrt/README.md`](openwrt/README.md). What a logged-in session is allowed to do on the router (path-scoped rpcd ACL), HTTPS and the signing key: [`docs/SECURITY.md`](docs/SECURITY.md).
 
 **Reading the file names on the Releases page:**
 
 | File | Format | For | Which |
 |---|---|---|---|
-| `untangled_<ver>_all.ipk` | opkg | **OpenWRT 23.05 / 24.10** (stable) | core |
-| `untangled-full_<ver>_all.ipk` | opkg | stable | full (recommended) |
-| `untangled-<ver>.apk` | apk | **OpenWRT snapshot** only | core |
-| `untangled-full-<ver>.apk` | apk | snapshot only | full |
+| `untangled_<ver>_all.ipk` | opkg | **OpenWRT 23.05 / 24.10** | core |
+| `untangled-full_<ver>_all.ipk` | opkg | 23.05 / 24.10 | full (recommended) |
+| `untangled-<ver>.apk` | apk | **OpenWRT 25.12+** and snapshot | core |
+| `untangled-full-<ver>.apk` | apk | 25.12+ and snapshot | full (recommended) |
 
-> On stable OpenWRT use the **`.ipk`** files. The **`.apk`** files are only for the experimental *snapshot* builds. The long names (version plus `all` for "any router model") are required by the router's package manager, so don't rename them.
+> On OpenWRT 23.05 and 24.10 use the **`.ipk`** files; on 25.12 and newer, and on snapshot, use the **`.apk`** files. The long names (version plus `all` for "any router model") are required by the router's package manager, so don't rename them.
 
 > **No router handy?** [Click through the live demo](https://bidhata.github.io/untangled/demo/) for the full UI with sample data, in your browser.
 
@@ -113,7 +113,7 @@ If the page looks unchanged after a command-line upgrade from 0.1.16 or older, r
 
 If you installed OpenWrt on a **Jio IDU (JIDU)** router — any of the AX6000 models (6101, 6201, 6401, 6601, 6701 on MediaTek, or 6111, 6411, 6611, 6811, 6911 on Qualcomm) — UnTangled installs the same way as above. A few things to know:
 
-- Your router is on **OpenWrt 25.12** (stable), so use the **opkg** commands above.
+- Your router is on **OpenWrt 25.12**, so use the **apk** commands above.
 - The default IP after flashing OpenWrt is **`192.168.1.1`** (the stock Jio address was `192.168.31.1`). Open `http://192.168.1.1/untangled/` after installing.
 - Sign in with the OpenWrt **root** account (the password you set in LuCI after flashing — this is *not* the old Jio admin password).
 - Both hardware families work: **MediaTek MT7986A** (`mt76` Wi-Fi, official OpenWrt) and **Qualcomm IPQ9574** (`ath11k`, community OpenWrt build). The UI package is architecture-independent.

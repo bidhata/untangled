@@ -127,12 +127,12 @@
   <h2>Install in 60 seconds</h2>
   <p class="sub">Add the signed UnTangled feed once, then install and upgrade with your router’s own package manager.</p>
   <ol style="max-width:760px;margin:0 auto 1.25rem;padding-left:1.2rem;color:var(--ink-dim);line-height:1.7">
-    <li><b>Check your OpenWRT version</b> — LuCI → Status → Overview (or <code>cat /etc/openwrt_release</code>). <b>23.05 / 24.10</b> → use the <b>opkg</b> tab; <b>SNAPSHOT</b> → the <b>apk</b> tab. In doubt, you’re on stable.</li>
+    <li><b>Check your OpenWRT version</b> — LuCI → Status → Overview (or <code>cat /etc/openwrt_release</code>). <b>23.05 / 24.10</b> → use the <b>opkg</b> tab; <b>25.12 or newer</b> and <b>SNAPSHOT</b> → the <b>apk</b> tab (OpenWRT switched to apk with 25.12). Not sure? Run <code>which apk opkg</code> and use the one it finds.</li>
     <li><b>Run the matching commands on the router</b> — over SSH, or paste them into LuCI → System → Custom Commands.</li>
     <li><b>Open <code>http://&lt;router-ip&gt;/untangled/</code></b> and sign in with your router’s admin account (same login as LuCI).</li>
   </ol>
   <div class="tabs">
-    <div class="tab"><h3>Stable OpenWRT — 23.05 / 24.10 <small>(opkg)</small></h3>
+    <div class="tab"><h3>OpenWRT 23.05 / 24.10 <small>(opkg)</small></h3>
 <pre><span class="c"># trust the signing key, add the feed (once)</span>
 wget -O /tmp/untangled.pub https://bidhata.github.io/untangled/keys/untangled.pub
 opkg-key add /tmp/untangled.pub
@@ -140,8 +140,8 @@ echo 'src/gz untangled https://bidhata.github.io/untangled/stable' \
   &gt;&gt; /etc/opkg/customfeeds.conf
 <span class="c"># install</span>
 opkg update &amp;&amp; <span class="k">opkg install untangled-full</span></pre></div>
-    <div class="tab"><h3>OpenWRT snapshot <small>(apk)</small></h3>
-<pre><span class="c"># trust the signing key, add the feed (once)</span>
+    <div class="tab"><h3>OpenWRT 25.12+ and snapshot <small>(apk)</small></h3>
+<pre><span class="c"># trust the signing key, add the feed (once; it is called "snapshot" but serves 25.12+ too)</span>
 wget -O /etc/apk/keys/untangled.pem https://bidhata.github.io/untangled/keys/untangled.pem
 echo 'https://bidhata.github.io/untangled/snapshot/packages.adb' \
   &gt; /etc/apk/repositories.d/untangled.list
@@ -149,7 +149,7 @@ echo 'https://bidhata.github.io/untangled/snapshot/packages.adb' \
 apk update &amp;&amp; <span class="k">apk add untangled-full</span></pre></div>
   </div>
   <p style="margin-top:1.25rem;color:var(--ink-dim)">Then open <code>http://&lt;router-ip&gt;/untangled/</code> and sign in with your router’s admin account. <b>LuCI keeps working untouched</b> — UnTangled lives at its own path. Prefer a file? Grab the <code>.ipk</code>/<code>.apk</code> from <a href="https://github.com/bidhata/untangled/releases">Releases</a>. Choose <code>untangled</code> (minimal), <code>untangled-full</code> (HTTPS, Wi-Fi scan, firmware, Wake-on-LAN) or add <code>untangled-mesh</code>.</p>
-  <p style="margin-top:.75rem;color:var(--ink-dim);font-size:.95rem"><b>Just want everything?</b> Install <code>untangled-full</code>. And don’t be surprised that its download is tiny (~1&nbsp;KB) while <code>untangled</code> is ~90&nbsp;KB — the core package holds the actual interface, and <code>untangled-full</code> is just a short list that tells the router to install the core <b>plus</b> the extras. Small file, full install. On the Releases page: use the <code>.ipk</code> files for stable OpenWRT (23.05 / 24.10) and the <code>.apk</code> files only for <em>snapshot</em>; the long names are required by the package manager, so don’t rename them.</p>
+  <p style="margin-top:.75rem;color:var(--ink-dim);font-size:.95rem"><b>Just want everything?</b> Install <code>untangled-full</code>. And don’t be surprised that its download is tiny (~1&nbsp;KB) while <code>untangled</code> is ~90&nbsp;KB — the core package holds the actual interface, and <code>untangled-full</code> is just a short list that tells the router to install the core <b>plus</b> the extras. Small file, full install. On the Releases page: use the <code>.ipk</code> files for OpenWRT 23.05 / 24.10 and the <code>.apk</code> files for 25.12+ and <em>snapshot</em>; the long names are required by the package manager, so don’t rename them.</p>
 </div></section>
 
 <section id="tour"><div class="wrap">

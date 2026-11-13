@@ -45,8 +45,8 @@ make package/untangled/compile V=s      # builds untangled, untangled-full and u
 ```
 
 Produces `untangled_<ver>_all.ipk` / `untangled-<ver>.apk` (core), the same for `untangled-full` (meta) and `untangled-mesh` (mesh backend).
-- **23.05 and 24.10 (stable)** use `.ipk` (opkg).
-- **Snapshot (main)** uses `.apk` (apk) — the only line that does.
+- **23.05 and 24.10** use `.ipk` (opkg).
+- **25.12 and newer, and snapshot (main)**, use `.apk` (apk).
 Same payload, different archive format — installed size is identical.
 
 ## 4. Install
