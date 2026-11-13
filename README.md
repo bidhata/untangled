@@ -201,6 +201,7 @@ public/plugins/  runtime plugins (e.g. Mesh Wi-Fi, Ping) + manifest
 openwrt/    packaging: Makefile (3 packages), rpcd ACLs, uci-defaults
 site/       the landing site + signed package feed (GitHub Pages)
 ui-prototype/    the clickable UX prototype, also the live demo
+scripts/test/    checks against a real OpenWRT image in docker (see its README)
 ```
 
 ## Develop
