@@ -40,9 +40,13 @@ define Package/untangled-full
   SUBMENU:=Web Servers/Proxies
   TITLE:=UnTangled web interface (full feature set)
   URL:=https://github.com/bidhata/untangled
-  # Pulls the optional capabilities. HTTPS (mbedtls) is usually already present
-  # on Wi-Fi images (wpad-mbedtls), so this often adds little.
-  DEPENDS:=+untangled +rpcd-mod-iwinfo +rpcd-mod-rpcsys +rpcd-mod-luci +libustream-mbedtls +px5g-mbedtls +cgi-io +etherwake
+  # Pulls the optional capabilities. HTTPS needs a TLS stack + self-signed cert
+  # generator; depend on the VIRTUAL providers (libustream-ssl / px5g) so any
+  # already-installed variant (mbedtls/openssl/wolfssl) satisfies them. Hard-
+  # depending on the -mbedtls variants clashes on images that ship the openssl/
+  # wolfssl ones (e.g. FriendlyWrt): both own /lib/libustream-ssl.so and
+  # /usr/sbin/px5g. See https://github.com/bidhata/untangled/issues/2
+  DEPENDS:=+untangled +rpcd-mod-iwinfo +rpcd-mod-rpcsys +rpcd-mod-luci +libustream-ssl +px5g +cgi-io +etherwake
   PKGARCH:=all
 endef
 

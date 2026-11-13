@@ -6,7 +6,7 @@ Three packages are built from one source:
 | Package | What it adds | Typical new bytes on disk* |
 |---|---|---|
 | **`untangled`** | Core: serve the UI + `/ubus`, session auth, file ops. **HTTP only.** | ~100 KB app (compressed on flash) + ~95 KB deps (if not already present) |
-| **`untangled-full`** | Core **+** Wi-Fi scan, firmware/backup, **HTTPS by default** | + up to ~300 KB (often ~0 — mbedtls is usually already on Wi-Fi images) |
+| **`untangled-full`** | Core **+** Wi-Fi scan, firmware/backup, **HTTPS by default** | + up to ~300 KB (often ~0 — a TLS stack is usually already on Wi-Fi images) |
 
 \* Installed (uncompressed) sizes. Real flash use is lower: the overlay
 (JFFS2/UBIFS) and SquashFS compress files, so the plain ~330 KB of app assets

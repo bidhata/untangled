@@ -11,14 +11,57 @@ const NULL_SESSION = '00000000000000000000000000000000';
 import { MOCK_ENABLED, mockCall } from './mockUbus';
 import { session } from './stores';
 
-let sessionId = NULL_SESSION;
+// The ubus session token. Persisted to sessionStorage so an in-tab reload or
+// an iOS/Safari/Firefox tab-discard-and-restore (which wipes JS memory) keeps
+// the user signed in; closing the tab still drops it. Router admin tokens are
+// short-lived server-side anyway (see login timeout below), so sessionStorage
+// is the right scope — not localStorage, which would outlive the tab.
+const SESSION_KEY = 'untangled-session';
+
+function loadSession(): string {
+  try {
+    const id = sessionStorage.getItem(SESSION_KEY);
+    if (id && /^[0-9a-f]{32}$/.test(id)) return id;
+  } catch { /* storage may be unavailable (private mode, etc.) */ }
+  return NULL_SESSION;
+}
+
+let sessionId = MOCK_ENABLED ? NULL_SESSION : loadSession();
 let rpcId = 1;
 
 export function setSession(id: string) {
   sessionId = id;
+  try {
+    if (id && id !== NULL_SESSION) sessionStorage.setItem(SESSION_KEY, id);
+    else sessionStorage.removeItem(SESSION_KEY);
+  } catch { /* storage may be unavailable */ }
 }
 export function getSession() {
   return sessionId;
+}
+
+/**
+ * Restore a persisted session on app boot. Returns the username if a token was
+ * stored AND is still valid server-side, otherwise null (and clears the token).
+ * Called once from App startup before deciding Login vs Shell, so a stale token
+ * falls back to the login screen cleanly instead of a half-broken UI.
+ */
+export async function restoreSession(): Promise<string | null> {
+  if (MOCK_ENABLED || sessionId === NULL_SESSION) return null;
+  try {
+    // `session access` (ACL-granted, no object) succeeds for any live session.
+    await call('session', 'access', {});
+    // Recover the username from rpcd's own session info for the UI header.
+    try {
+      const info = await call<{ data?: { username?: string } }>('session', 'get', {});
+      return info?.data?.username ?? 'root';
+    } catch {
+      return 'root';
+    }
+  } catch {
+    setSession(NULL_SESSION);
+    return null;
+  }
 }
 
 // ubus status codes (ubus_msg_status)
@@ -86,7 +129,7 @@ async function denied(err: UbusError, object: string): Promise<UbusError> {
     await call('session', 'access', {});
     return err; // session is fine: a real ACL denial
   } catch {
-    sessionId = NULL_SESSION;
+    setSession(NULL_SESSION);
     session.set({ username: null });
     return new UbusError(err.code, 'Your session expired. Please sign in again.');
   }
@@ -114,16 +157,19 @@ export interface LoginResult {
   data: { username: string };
 }
 
-/** Authenticate against rpcd's session object and keep the returned token. */
+/** Authenticate against rpcd's session object and keep the returned token.
+ *  Request a 1-hour session (rpcd defaults to 300s, which lapses quickly on
+ *  mobile where the tab is often backgrounded); rpcd slides the expiry forward
+ *  on each authenticated call, so an active user effectively stays signed in. */
 export async function login(username: string, password: string): Promise<LoginResult> {
   const prev = sessionId;
   sessionId = NULL_SESSION; // login always runs on the null session
   try {
-    const data = await call<LoginResult>('session', 'login', { username, password });
+    const data = await call<LoginResult>('session', 'login', { username, password, timeout: 3600 });
     setSession(data.ubus_rpc_session);
     return data;
   } catch (e) {
-    sessionId = prev;
+    setSession(prev);
     throw e;
   }
 }

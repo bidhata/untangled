@@ -5,6 +5,7 @@
       "ubus": {
         "session": [
           "access",
+          "get",
           "list"
         ],
         "uci": [
@@ -256,6 +257,7 @@
       "ubus": {
         "session": [
           "access",
+          "get",
           "list"
         ],
         "uci": [
