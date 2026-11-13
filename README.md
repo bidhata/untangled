@@ -127,7 +127,7 @@ package is `PKGARCH:=all`), with room for its dependencies: `uhttpd`,
 
 | Feature | Needs |
 |---|---|
-| Wi-Fi scan / signal, HTTPS, firmware upgrade, Wake-on-LAN | `untangled-full` (pulls `rpcd-mod-iwinfo`, `cgi-io`, mbedtls + `px5g`, `etherwake`) |
+| Wi-Fi scan / signal, HTTPS, firmware upgrade, Wake-on-LAN | `untangled-full` (pulls `rpcd-mod-iwinfo`, `cgi-io`, a TLS stack + `px5g`, `etherwake`) |
 | QoS · Dynamic DNS · UPnP · Dual-WAN · USB sharing · Usage history | `sqm-scripts` · `ddns-scripts` · `miniupnpd-nftables` · `mwan3` · `ksmbd`/`minidlna` · `vnstat` + `nlbwmon` |
 | Mesh Wi-Fi · Tailscale | `untangled-mesh` · `tailscale` |
 
@@ -246,6 +246,15 @@ Thanks to **[u/venkatx5](https://www.reddit.com/user/venkatx5/)** for install fe
 reports (device internet blocking and parental controls, Samba4 storage detection, device
 renaming, AdGuard Home detection, firewall rule creation, config backup, and package-list
 detection for `untangled-full`).
+
+Thanks to **[@jc21](https://github.com/jc21)** for the FriendlyWrt install report
+([#2](https://github.com/bidhata/untangled/issues/2)) — `untangled-full` failing on images
+that ship OpenSSL/wolfSSL instead of mbedTLS, which fixed the TLS dependencies to use the
+virtual providers (`libustream-ssl` / `px5g`) so any installed variant satisfies them.
+
+Thanks to the reporter of the **Firefox-on-iPhone sign-in bug** — being bounced to the login
+screen when switching screens — which surfaced that the session token was never persisted;
+it is now kept across reloads and tab restores, with a longer, auto-renewed rpcd session.
 
 ---
 

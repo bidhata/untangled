@@ -78,7 +78,9 @@ define Package/untangled-full
   SUBMENU:=Web Servers/Proxies
   TITLE:=UnTangled web interface (full feature set)
   URL:=https://github.com/bidhata/untangled
-  DEPENDS:=+untangled +rpcd-mod-iwinfo +rpcd-mod-rpcsys +rpcd-mod-luci +libustream-mbedtls +px5g-mbedtls +cgi-io +etherwake
+  # Depend on the VIRTUAL TLS providers (libustream-ssl / px5g) so any installed
+  # variant (mbedtls/openssl/wolfssl) satisfies the dependency. See issue #2.
+  DEPENDS:=+untangled +rpcd-mod-iwinfo +rpcd-mod-rpcsys +rpcd-mod-luci +libustream-ssl +px5g +cgi-io +etherwake
   PKGARCH:=all
 endef
 
