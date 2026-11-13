@@ -1,10 +1,16 @@
 import { defineConfig } from 'vite';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 import { readFileSync } from 'node:fs';
+import { Agent } from 'node:https';
 
 // During `npm run dev`, forward /ubus to a real router so you can develop
 // against live data. Point it at your router:  ROUTER=192.168.1.1 npm run dev
 const ROUTER = process.env.ROUTER || '192.168.1.1';
+
+// Without an agent the proxy sends "Connection: close", so every ubus call
+// costs the router a full TLS handshake (~150 ms CPU on a small single-core
+// router). Keeping the connections open makes dev load match the browser's.
+const routerAgent = new Agent({ keepAlive: true, rejectUnauthorized: false });
 
 // Single source of truth for the app version: package.json.
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'));
@@ -36,7 +42,8 @@ export default defineConfig({
       '/ubus': {
         target: `https://${ROUTER}`,
         changeOrigin: true,
-        secure: false // routers ship a self-signed cert
+        secure: false, // routers ship a self-signed cert
+        agent: routerAgent
       }
     }
   }
