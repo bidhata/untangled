@@ -130,6 +130,8 @@ function dbmToBars(dbm: number): number {
 
 /** Why the last wireless lookup could not classify devices ('' when it worked). Shown as a hint in the UI. */
 export let wifiDiag = '';
+/** True when the last lookup found no Wi-Fi radios at all (wired-only router) — not a fault. */
+export let wifiAbsent = false;
 
 function bandFromFreq(mhz: number): Band {
   if (mhz >= 5925) return '6';
@@ -158,6 +160,7 @@ async function getWirelessAssoc(): Promise<{
 
   try {
     const status = await call<any>('network.wireless', 'status');
+    wifiAbsent = !Object.keys(status ?? {}).length;
     for (const radio of Object.values<any>(status ?? {})) {
       const band = radioBand(radio);
       for (const iface of radio?.interfaces ?? []) {
@@ -305,7 +308,9 @@ export async function getLog(lines = 200): Promise<LogEntry[]> {
   const arr = Array.isArray(r?.log) ? r.log : [];
   return arr.map((e: any) => ({
     time: num(e.time),
-    priority: num(e.priority),
+    // logd reports the full syslog PRI (facility*8 + level); keep only the level
+    // (0 emerg … 7 debug), which is what every consumer here compares against.
+    priority: num(e.priority) & 7,
     source: num(e.source),
     msg: String(e.msg ?? '')
   }));

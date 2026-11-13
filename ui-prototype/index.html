@@ -449,9 +449,10 @@ details.adv .advb{padding:0 15px 15px;font-size:12.5px;color:var(--muted);line-h
       <button class="nav-item" data-screen="dualwan"><svg><use href="#i-wan"/></svg> Dual WAN</button>
       <button class="nav-item" data-screen="upnp"><svg><use href="#i-port"/></svg> UPnP</button>
       <button class="nav-item" data-screen="portfwd"><svg><use href="#i-port"/></svg> Port Forwarding</button>
+      <button class="nav-item" data-screen="vpn"><svg><use href="#i-vpn"/></svg> VPN</button>
+      <button class="nav-item" data-screen="tailscale"><svg><use href="#i-vpn"/></svg> Tailscale</button>
       <button class="nav-item" data-screen="lan"><svg><use href="#i-lan"/></svg> LAN</button>
       <button class="nav-item" data-screen="ipv6"><svg><use href="#i-ipv6"/></svg> IPv6</button>
-      <button class="nav-item" data-screen="vpn"><svg><use href="#i-vpn"/></svg> VPN</button>
       <button class="nav-item" data-screen="firewall"><svg><use href="#i-fire"/></svg> Firewall</button>
       <button class="nav-item" data-screen="dmz"><svg><use href="#i-port"/></svg> DMZ</button>
       <button class="nav-item" data-screen="admin"><svg><use href="#i-admin"/></svg> Administration</button>
@@ -459,6 +460,7 @@ details.adv .advb{padding:0 15px 15px;font-size:12.5px;color:var(--muted);line-h
     </div>
     <div class="nav-label">System</div>
     <div class="nav-group">
+      <button class="nav-item" data-screen="doctor"><svg><use href="#i-shield"/></svg> Network Doctor</button>
       <button class="nav-item" data-screen="usb"><svg><use href="#i-pkg"/></svg> USB Storage</button>
       <button class="nav-item" data-screen="firmware"><svg><use href="#i-power"/></svg> Firmware</button>
       <button class="nav-item" data-screen="software"><svg><use href="#i-pkg"/></svg> Software</button>
@@ -937,6 +939,9 @@ details.adv .advb{padding:0 15px 15px;font-size:12.5px;color:var(--muted);line-h
         <div class="form-row"><div class="lbl">Time zone<span class="help" tabindex="0" role="note" aria-label="Help">?<span class="tip">Sets the clock used for logs and schedules (like Parental Controls).</span></span></div><div class="ctl"><select><option selected>Asia/Kolkata</option><option>UTC</option><option>America/New_York</option><option>America/Los_Angeles</option><option>Europe/London</option><option>Europe/Berlin</option><option>Asia/Singapore</option><option>Australia/Sydney</option></select></div></div>
         <div class="form-actions"><button class="btn primary" type="button" onclick="toast('System settings applied')">Apply</button></div>
       </div></div>
+      <div class="panel" style="max-width:1000px;margin-bottom:18px"><div class="panel-h"><h2>Default page</h2></div><div class="panel-b">
+        <div class="form-row" style="border:0"><div class="lbl">Open UnTangled at http://router/<span class="help" tabindex="0" role="note" aria-label="Help">?<span class="tip">Makes UnTangled the page you land on when you type the router's address. LuCI, if installed, keeps working at /cgi-bin/luci — nothing is removed, and you can switch back any time.</span></span></div><div class="ctl"><label class="toggle"><input type="checkbox" checked onchange="toast(this.checked?'UnTangled is now the default page (simulated)':'Default page restored (simulated)')"><span class="track"></span><span class="knob"></span></label></div></div>
+      </div></div>
       <div class="panel" style="max-width:1000px;margin-bottom:18px"><div class="panel-h"><h2>Router password</h2><span class="sub">for signing in to UnTangled</span></div><div class="panel-b">
         <div class="form-row"><div class="lbl">New password<span class="help" tabindex="0" role="note" aria-label="Help">?<span class="tip">The router's admin login password (the same one SSH uses). Use at least 8 characters.</span></span></div><div class="ctl"><input type="password" id="admPw1" placeholder="New password"><button class="btn" type="button" onclick="var p=document.getElementById('admPw1');var s=p.type==='password';p.type=s?'text':'password';this.textContent=s?'Hide':'Show';">Show</button></div></div>
         <div class="form-row"><div class="lbl">Confirm password</div><div class="ctl"><input type="password" id="admPw2" placeholder="Re-enter password"></div></div>
@@ -1018,7 +1023,12 @@ details.adv .advb{padding:0 15px 15px;font-size:12.5px;color:var(--muted);line-h
       <div class="page-head"><div><div class="breadcrumb">Advanced Settings</div><h1>IPv6</h1><p>The newer internet addressing, alongside IPv4.</p></div></div>
       <div class="panel" style="max-width:720px"><div class="panel-b">
         <div class="form-row"><div class="lbl">IPv6 on the internet connection<span class="help" tabindex="0" role="note" aria-label="Help">?<span class="tip">Turn off only if your ISP has no IPv6 or it causes trouble.</span></span></div><div class="ctl"><label class="toggle"><input type="checkbox" checked><span class="track"></span><span class="knob"></span></label></div></div>
-        <div class="form-row"><div class="lbl">Hand out IPv6 to devices<span class="help" tabindex="0" role="note" aria-label="Help">?<span class="tip">Server: the router advertises IPv6 and runs DHCPv6. Relay: pass the ISP's IPv6 through. Off: no IPv6 on the LAN.</span></span></div><div class="ctl"><select><option selected>Server (recommended)</option><option>Relay</option><option>Off</option></select></div></div>
+        <div class="form-row"><div class="lbl">Hand out IPv6 to devices<span class="help" tabindex="0" role="note" aria-label="Help">?<span class="tip">Server: the router advertises IPv6 and runs DHCPv6. Relay: pass the ISP's IPv6 through. Off: no IPv6 on the LAN.</span></span></div><div class="ctl"><select id="v6Mode"><option selected>Server (recommended)</option><option>Relay</option><option>Off</option></select></div></div>
+        <div class="form-row" id="v6DnsRow" style="align-items:flex-start"><div class="lbl">IPv6 DNS servers<span class="help" tabindex="0" role="note" aria-label="Help">?<span class="tip">IPv6 DNS addresses the router announces to devices (via Router Advertisements and DHCPv6). Leave empty to announce the router itself as the DNS server.</span></span></div><div class="ctl" style="flex-direction:column;align-items:stretch;gap:8px;width:100%;max-width:360px">
+          <div id="v6DnsList" style="display:flex;flex-direction:column;gap:8px"></div>
+          <div style="display:flex;gap:8px"><input type="text" id="v6DnsNew" class="mono" placeholder="2606:4700:4700::1111" spellcheck="false" style="flex:1;min-width:0"><button class="btn" type="button" id="v6DnsAdd">Add</button></div>
+          <span class="hint" id="v6DnsErr" style="color:var(--crit);display:none"></span>
+        </div></div>
         <div class="form-actions"><button class="btn primary" onclick="toast('IPv6 settings applied')">Apply</button></div>
       </div></div>
     </section>
@@ -1034,6 +1044,46 @@ details.adv .advb{padding:0 15px 15px;font-size:12.5px;color:var(--muted);line-h
         </div></div>
         <div style="max-height:58vh;overflow:auto;padding:6px 0" class="mono" id="logbox"></div>
       </div>
+    </section>
+
+    <!-- TAILSCALE -->
+    <section class="screen" id="screen-tailscale">
+      <style>
+        #screen-tailscale .st-off{background:var(--panel-2);color:var(--muted)}
+        #screen-tailscale .appbadge{margin-left:7px;font-size:10px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--accent-deep);background:rgba(15,181,196,.14);padding:2px 7px;border-radius:999px;white-space:nowrap}
+      </style>
+      <div class="page-head"><div><div class="breadcrumb">Advanced Settings</div><h1>Tailscale</h1><p>A private mesh VPN. Reach the devices on this network from your phone or laptop anywhere, with no port forwarding.</p></div></div>
+      <div class="panel" style="margin-bottom:18px"><div class="panel-b" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+        <div class="devicon" style="width:52px;height:52px"><svg style="width:24px;height:24px"><use href="#i-vpn"/></svg></div>
+        <div style="flex:1;min-width:200px">
+          <div style="font-size:15px;font-weight:700;display:flex;align-items:center;gap:10px">Tailscale <span class="statechip st-ok" id="tsState">Connected</span></div>
+          <div class="hint mono" id="tsSelf">100.84.12.7 · home.ts.net</div>
+        </div>
+        <button class="btn" type="button" id="tsBtn">Disconnect</button>
+      </div></div>
+      <div class="panel">
+        <div class="panel-h"><h2>Machines</h2><span class="sub" id="tsCount"></span></div>
+        <div style="overflow-x:auto"><table class="clients">
+          <thead><tr><th>Machine</th><th>Tailscale IP</th><th>OS</th><th style="text-align:right">Status</th></tr></thead>
+          <tbody id="tsRows"></tbody>
+        </table></div>
+      </div>
+      <details class="adv" style="margin-top:18px"><summary>Advanced details</summary><div class="advb">Runs the <span class="mono">tailscale</span> CLI on the router. <b>Connect</b> runs <span class="mono">tailscale up --accept-routes</span>; first time it returns a <span class="mono">login.tailscale.com</span> URL to authorise this node. <b>Disconnect</b> runs <span class="mono">tailscale down</span>. Status comes from <span class="mono">tailscale status --json</span>. Needs the <span class="mono">tailscale</span> package.</div></details>
+    </section>
+
+    <!-- NETWORK DOCTOR -->
+    <section class="screen" id="screen-doctor">
+      <style>
+        #screen-doctor .dot{display:inline-block;width:9px;height:9px;border-radius:50%}
+        #screen-doctor .clients tr{cursor:default}
+      </style>
+      <div class="page-head"><div><div class="breadcrumb">System</div><h1>Network Doctor</h1><p>A quick, read-only health check of your router. Nothing is changed.</p></div>
+        <button class="btn" type="button" id="docRun">Re-run</button></div>
+      <div class="panel">
+        <div class="panel-h"><h2><i class="dot" id="docDot" style="width:10px;height:10px;margin-right:8px"></i><span id="docHead"></span></h2><span class="sub" id="docCount"></span></div>
+        <div class="panel-b"><table class="clients"><tbody id="docRows"></tbody></table></div>
+      </div>
+      <details class="adv"><summary>Advanced details</summary><div class="advb">Runs once, in your browser, over a handful of read-only <span class="mono">ubus</span> calls: <span class="mono">network.interface dump</span> (internet, DNS, carrier-grade NAT), <span class="mono">system info</span> (memory), <span class="mono">hostapd get_clients</span> / <span class="mono">iwinfo</span> (Wi-Fi) and <span class="mono">log read</span> (error-level events). No writes, no polling.</div></details>
     </section>
 
     <!-- STUBS -->
@@ -1670,7 +1720,12 @@ function buildCmdIndex(){
   const pages=[["map","Network Map","i-map"],["wireless","Wireless","i-wifi"],["guest","Guest Network","i-guest"],
     ["traffic","Traffic Monitor","i-qos"],["parental","Parental Controls","i-kids"],["extend","Extend Wi-Fi","i-ext"],
     ["aiprotect","Network Protection","i-shield"],["vpn","Access home (VPN)","i-vpn"],["wan","Internet Setup","i-wan"],
-    ["portfwd","Port Forwarding","i-port"],["admin","Administration","i-admin"],["software","Software","i-pkg"]
+    ["portfwd","Port Forwarding","i-port"],["admin","Administration","i-admin"],["software","Software","i-pkg"],
+    ["devices","Devices","i-clients"],["mesh","Mesh Wi-Fi","i-ext"],["usage","Usage History","i-qos"],
+    ["ddns","Dynamic DNS","i-wan"],["qos","QoS (Smart Queue)","i-qos"],["dualwan","Dual WAN","i-wan"],["upnp","UPnP","i-port"],
+    ["tailscale","Tailscale","i-vpn"],["lan","LAN","i-lan"],["ipv6","IPv6","i-ipv6"],["firewall","Firewall","i-fire"],
+    ["dmz","DMZ","i-port"],["log","System Log","i-log"],["doctor","Network Doctor","i-shield"],
+    ["usb","USB Storage","i-pkg"],["firmware","Firmware","i-power"]
   ].map(p=>({label:p[1],icon:p[2],cat:"Page",run:()=>navTo(p[0])}));
   const actions=[
     {label:"Reboot router",icon:"i-power",cat:"Action",run:()=>$("rebootModal").classList.add("show")},
@@ -1716,7 +1771,7 @@ function scrollCmdActive(){const el=document.querySelectorAll("#cmdResults .cmd-
 
 /* ---------- Navigation ---------- */
 const stubMeta={};
-const realScreens=new Set(["map","devices","mesh","wireless","guest","traffic","usage","parental","extend","aiprotect","vpn","wan","ddns","qos","dualwan","upnp","portfwd","firewall","dmz","lan","ipv6","admin","log","usb","firmware","software"]);
+const realScreens=new Set(["map","devices","mesh","wireless","guest","traffic","usage","parental","extend","aiprotect","vpn","wan","ddns","qos","dualwan","upnp","portfwd","firewall","dmz","lan","ipv6","admin","log","usb","firmware","software","tailscale","doctor"]);
 /* ---------- Devices ---------- */
 const devState={};
 clients.forEach(c=>{devState[c.id]={reserved:false,ip:c.ip,blocked:false};});
@@ -1810,6 +1865,74 @@ buildDevices();
     if(!verified){verified=true;btn.textContent="Flash now";keepRow.style.display="";toast("Image verified for RT-AX88U (simulated)");}
     else{toast("Flashing started — router will reboot (simulated)");btn.disabled=true;}
   });
+})();
+
+/* ---------- Tailscale (simulated) ---------- */
+(function(){
+  const rows=$("tsRows"); if(!rows) return;
+  let on=true;
+  const peers=[["untangled","100.84.12.7","linux",true,true],["krish-iphone","100.101.3.44","iOS",true,false],
+    ["work-laptop","100.72.200.9","macOS",true,false],["nas","100.90.15.2","linux",false,false]];
+  function render(){
+    $("tsState").textContent=on?"Connected":"Disconnected";
+    $("tsState").className="statechip "+(on?"st-ok":"st-off");
+    $("tsSelf").textContent=on?"100.84.12.7 · home.ts.net":"—";
+    $("tsBtn").textContent=on?"Disconnect":"Connect";
+    $("tsBtn").classList.toggle("primary",!on);
+    $("tsCount").textContent=peers.length;
+    rows.innerHTML=peers.map(p=>{const up=on&&p[3];return `<tr style="cursor:default"><td><b style="font-weight:600">${p[0]}</b>${p[4]?'<span class="appbadge">this router</span>':""}</td><td class="mono">${p[1]}</td><td>${p[2]}</td><td style="text-align:right"><span class="statechip ${up?"st-ok":"st-off"}">${up?"online":"offline"}</span></td></tr>`;}).join("");
+  }
+  $("tsBtn").addEventListener("click",()=>{on=!on;render();toast(on?"Tailscale connecting… (simulated)":"Tailscale disconnected (simulated)");});
+  render();
+})();
+
+/* ---------- Network Doctor (simulated findings, same checks as the app) ---------- */
+(function(){
+  const rows=$("docRows"); if(!rows) return;
+  const col={ok:"var(--good)",warn:"var(--warn)",crit:"var(--crit)"};
+  const head={ok:"Everything looks healthy.",warn:"A few things worth a look.",crit:"Something needs attention."};
+  const findings=[
+    {title:"Internet connection is up.",sev:"ok"},
+    {title:"Memory use is healthy (41%).",sev:"ok"},
+    {title:"Wi-Fi radios are responding.",sev:"ok"},
+    {title:"1 error-level event in the recent system log.",sev:"warn",detail:"banip: download of feed 'doh' failed, retrying",screen:"log"}
+  ];
+  let timer=null;
+  function run(){
+    const btn=$("docRun"); btn.disabled=true; btn.textContent="Checking…";
+    $("docHead").textContent="Checking…"; $("docDot").style.background="var(--muted)"; $("docCount").textContent="";
+    rows.innerHTML='<tr><td colspan="3" style="color:var(--muted);padding:22px">Running checks…</td></tr>';
+    clearTimeout(timer);
+    timer=setTimeout(()=>{
+      const worst=findings.some(f=>f.sev==="crit")?"crit":findings.some(f=>f.sev==="warn")?"warn":"ok";
+      $("docHead").textContent=head[worst]; $("docDot").style.background=col[worst];
+      $("docCount").textContent=findings.length+" checks";
+      rows.innerHTML=findings.map(f=>`<tr><td style="width:14px"><i class="dot" style="background:${col[f.sev]}"></i></td><td><b style="font-weight:600">${f.title}</b>${f.detail?`<div class="mono" style="color:var(--muted);white-space:pre-wrap;margin-top:4px">${f.detail}</div>`:""}</td><td style="text-align:right">${f.screen&&f.sev!=="ok"?`<button class="btn" type="button" data-open="${f.screen}">Open</button>`:""}</td></tr>`).join("");
+      rows.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>navTo(b.dataset.open));
+      btn.disabled=false; btn.textContent="Re-run";
+    },600);
+  }
+  $("docRun").addEventListener("click",run);
+  run();
+})();
+
+/* ---------- IPv6 announced DNS ---------- */
+(function(){
+  const list=$("v6DnsList"); if(!list) return;
+  const dns=["2606:4700:4700::1111"], err=$("v6DnsErr"), inp=$("v6DnsNew");
+  function render(){
+    list.innerHTML=dns.map((a,i)=>`<div style="display:flex;align-items:center;gap:8px"><span class="mono" style="flex:1;min-width:0;overflow-wrap:anywhere">${a}</span><button class="btn" type="button" data-rm="${i}" aria-label="Remove ${a}">Remove</button></div>`).join("");
+    list.querySelectorAll("[data-rm]").forEach(b=>b.onclick=()=>{dns.splice(+b.dataset.rm,1);render();});
+  }
+  function fail(m){err.textContent=m;err.style.display=m?"":"none";}
+  $("v6DnsAdd").addEventListener("click",()=>{
+    const v=inp.value.trim();
+    if(!/^[0-9a-fA-F:]+$/.test(v)||v.indexOf(":")<0||v.length<3) return fail("Enter a valid IPv6 address (e.g. 2606:4700:4700::1111).");
+    if(dns.includes(v)) return fail("That address is already in the list.");
+    dns.push(v); inp.value=""; fail(""); render();
+  });
+  $("v6Mode").addEventListener("change",e=>{$("v6DnsRow").style.display=e.target.selectedIndex===0?"":"none";});
+  render();
 })();
 
 function navTo(screen){

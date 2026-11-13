@@ -29,6 +29,7 @@
   import Ipv6 from '../screens/Ipv6.svelte';
   import Administration from '../screens/Administration.svelte';
   import Software from '../screens/Software.svelte';
+  import Doctor from '../screens/Doctor.svelte';
   import Toasts from './Toasts.svelte';
   import ConfirmApply from './ConfirmApply.svelte';
   import PluginHost from './PluginHost.svelte';
@@ -67,7 +68,8 @@
     lan: Lan,
     ipv6: Ipv6,
     admin: Administration,
-    software: Software
+    software: Software,
+    doctor: Doctor
   };
   $: Current = screens[$route];
   $: activePlugin = $plugins.find((p) => p.id === $route) || null;

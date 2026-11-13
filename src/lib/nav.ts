@@ -46,6 +46,7 @@ export const nav: NavGroup[] = [
   {
     label: 'System',
     items: [
+      { id: 'doctor', label: 'Network Doctor', icon: 'i-shield' },
       { id: 'usb', label: 'USB Storage', icon: 'i-pkg' },
       { id: 'firmware', label: 'Firmware', icon: 'i-power' },
       { id: 'software', label: 'Software', icon: 'i-pkg' }
