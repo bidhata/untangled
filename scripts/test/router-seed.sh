@@ -8,7 +8,7 @@ printf 'test1234\ntest1234\n' | passwd root >/dev/null 2>&1
 # opkg on 23.05 / 24.10, apk on 25.12+ and snapshot
 if command -v apk >/dev/null 2>&1; then
   apk update >/dev/null 2>&1
-  apk add uhttpd uhttpd-mod-ubus rpcd rpcd-mod-file rpcd-mod-luci mwan3 samba4-server ddns-scripts ddns-scripts-noip cgi-io >/dev/null 2>&1
+  apk add uhttpd uhttpd-mod-ubus rpcd rpcd-mod-file rpcd-mod-luci wifi-scripts mwan3 samba4-server ddns-scripts ddns-scripts-noip cgi-io >/dev/null 2>&1
   /etc/init.d/rpcd enable; /etc/init.d/uhttpd enable
 else
   opkg update >/dev/null 2>&1
@@ -61,6 +61,10 @@ uci commit network
 # an attached "drive"
 mkdir -p /mnt/usb
 mount -t tmpfs tmpfs /mnt/usb
+# netifd only publishes network.wireless once it has loaded the wifi scripts
+# (installed above on 25.12+) and the seeded wireless config.
+/etc/init.d/network restart
+sleep 4
 /etc/init.d/rpcd restart
 /etc/init.d/uhttpd restart
 sleep 2

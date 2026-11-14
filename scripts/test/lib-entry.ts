@@ -2,6 +2,7 @@
 // Node by run.sh (esbuild) so they can be called against a live router's /ubus
 // without a browser. Add a module here when a check needs it.
 export * as ubus from '../../src/lib/ubus';
+export * as net from '../../src/lib/net';
 export * as repeater from '../../src/lib/repeater';
 export * as vpn from '../../src/lib/vpn';
 export * as dualwan from '../../src/lib/dualwan';

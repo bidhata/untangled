@@ -164,6 +164,25 @@ export let wifiDiag = '';
 /** True when the last lookup found no Wi-Fi radios at all (wired-only router) — not a fault. */
 export let wifiAbsent = false;
 
+/**
+ * Per-radio runtime state: `network.wireless status`, or the same object from
+ * `luci-rpc getWirelessDevices`. OpenWRT 25.12 moved the first into a ucode
+ * object that rejects any argument it does not declare, and uhttpd adds
+ * `ubus_rpc_session` to every call, so over HTTP it answers INVALID_ARGUMENT
+ * there. luci-rpc reads it router-side and returns the same shape.
+ */
+export async function wirelessStatus(): Promise<Record<string, any>> {
+  try {
+    return (await call<any>('network.wireless', 'status')) ?? {};
+  } catch (e) {
+    try {
+      return (await call<any>('luci-rpc', 'getWirelessDevices')) ?? {};
+    } catch {
+      throw e;
+    }
+  }
+}
+
 function bandFromFreq(mhz: number): Band {
   if (mhz >= 5925) return '6';
   if (mhz >= 4900) return '5';
@@ -190,16 +209,24 @@ async function getWirelessAssoc(): Promise<{
   const problems: string[] = [];
 
   try {
-    const status = await call<any>('network.wireless', 'status');
+    const status = await wirelessStatus();
     wifiAbsent = !Object.keys(status ?? {}).length;
+    let aps = 0;
     for (const radio of Object.values<any>(status ?? {})) {
       const band = radioBand(radio);
       for (const iface of radio?.interfaces ?? []) {
+        // Only access points have associated clients; a client (sta) link to
+        // another router has no hostapd object and nothing to list.
+        if ((iface?.config?.mode ?? 'ap') !== 'ap') continue;
+        aps++;
         // ifname sits directly on the interface or under its config, by build.
         const ifname = iface?.ifname || iface?.config?.ifname || iface?.iface;
         if (ifname) ifaces.push({ ifname: String(ifname), band });
       }
     }
+    // Radios present but no access point configured (e.g. a wireless bridge):
+    // no device can be a Wi-Fi client of this router, and that is not a fault.
+    if (!wifiAbsent && aps === 0) { wifiDiag = ''; return { map, ok: true }; }
     if (!ifaces.length) problems.push('network.wireless reported no radio interfaces');
   } catch (e) {
     problems.push(`network.wireless status: ${(e as Error).message}`);

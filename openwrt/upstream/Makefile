@@ -61,7 +61,7 @@ define Package/untangled
   SUBMENU:=Web Servers/Proxies
   TITLE:=UnTangled web interface (core)
   URL:=https://github.com/bidhata/untangled
-  DEPENDS:=+uhttpd +uhttpd-mod-ubus +rpcd +rpcd-mod-file
+  DEPENDS:=+uhttpd +uhttpd-mod-ubus +rpcd +rpcd-mod-file +rpcd-mod-luci
   PKGARCH:=all
 endef
 

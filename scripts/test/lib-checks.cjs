@@ -32,6 +32,23 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
   await L.ubus.login('ut', 'test1234');
 
+  // ---- Wi-Fi status over /ubus. On 25.12+ `network.wireless status` rejects
+  // the session argument uhttpd adds (INVALID_ARGUMENT), so the app falls back
+  // to luci-rpc; either way both seeded radios must come back.
+  const wst = await L.net.wirelessStatus().catch((e) => ({ error: e.message }));
+  if (!Object.keys(wst).length) {
+    // The 23.05 x86 image has no wifi driver scripts: netifd reports no radios.
+    console.log('SKIP  wifi status: this image reports no radios');
+  } else {
+    ok('wifi status: both radios reported', !!wst.radio0 && !!wst.radio1 && Array.isArray(wst.radio0.interfaces), Object.keys(wst).join(',') + (wst.error ? ' ' + wst.error : ''));
+    // A router that only joins another network (wireless bridge, no access
+    // point of its own) is not a Wi-Fi fault.
+    dx('cp /etc/config/wireless /root/wireless.bak; uci set wireless.default_radio0.mode=sta; uci set wireless.default_radio1.mode=sta; uci commit wireless; wifi reload; sleep 4');
+    await L.net.getClients();
+    ok('wifi status: client-only router is not flagged', L.net.wifiDiag === '' && !L.net.wifiAbsent, L.net.wifiDiag);
+    dx('cp /root/wireless.bak /etc/config/wireless; rm /root/wireless.bak; wifi reload; sleep 4');
+  }
+
   // ---- Extend Wi-Fi: join on the radio that heard the network, wwan in wan zone, rollback window
   const before = dx('uci show wireless | grep -c "mode=.sta."; uci get firewall.@zone[1].network');
   const net = { ssid: 'Upstairs 5G', signal: 4, locked: true, bssid: 'aa:bb:cc:00:11:22', radio: 'radio1', bandLabel: '5 GHz', encryption: 'sae-mixed' };

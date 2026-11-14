@@ -3,6 +3,7 @@
 // shares it with everything behind it through NAT, exactly like a wired WAN.
 import { call, uciGet, uciSet, uciAdd, firewallApply } from './ubus';
 import { loadWireless, keyProblem } from './wireless';
+import { wirelessStatus } from './net';
 import { stageWanZone } from './firewall';
 
 export interface ScanResult {
@@ -35,7 +36,7 @@ function uciEncryption(e: any): string {
 /** Scan on every radio, so a 5 GHz-only network is found and later joined on the 5 GHz radio. */
 export async function scan(): Promise<ScanResult[]> {
   const radios = await loadWireless();
-  const st = await call<any>('network.wireless', 'status').catch(() => ({}));
+  const st = await wirelessStatus().catch(() => ({} as Record<string, any>));
   const map = new Map<string, ScanResult>();
   let answered = 0;
   let firstError: unknown = null;
